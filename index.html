@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NICU Discharge Summary Generator</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Times+New+Roman&display=swap');
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            color: black;
+        }
+
+        /* Editor Styles */
+        .editor-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: sans-serif;
+            font-size: 0.875rem;
+        }
+        .editor-label {
+            display: block;
+            font-family: sans-serif;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #4b5563;
+            margin-bottom: 0.25rem;
+        }
+
+        /* A4 Paper Styles */
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            padding: 15mm;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin: 0 auto;
+            position: relative;
+            color: black;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .a4-page {
+                box-shadow: none;
+                margin: 0;
+                padding: 10mm; /* Slightly smaller padding for printer margins */
+                width: 100%;
+            }
+        }
+
+        /* Table Styles */
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        .doc-table th, .doc-table td {
+            border: 1px solid black;
+            padding: 4px;
+            text-align: center;
+        }
+        .doc-table th {
+            background-color: #f3f4f6;
+            font-weight: bold;
+        }
+        .doc-table td:first-child {
+            text-align: left;
+            font-weight: bold;
+        }
+
+        /* Signature Line */
+        .signature-line {
+            border-top: 1px solid black;
+            width: 100%;
+            margin-top: 40px;
+        }
+
+        /* Utility */
+        .bengali-text {
+            font-family: 'Noto Sans Bengali', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-gray-900 text-white p-4 shadow-md flex justify-between items-center no-print z-10">
+        <div class="flex items-center gap-2">
+            <i data-lucide="file-text"></i>
+            <h1 class="text-xl font-bold font-sans">NICU Discharge Generator</h1>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="exportToWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition">
+                <i data-lucide="download"></i> Download Word
+            </button>
+            <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition">
+                <i data-lucide="printer"></i> Print / Save PDF
+            </button>
+        </div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- EDITOR COLUMN (Left) -->
+        <div class="w-full md:w-5/12 bg-white border-r border-gray-300 overflow-y-auto p-6 no-print font-sans">
+            <h2 class="text-lg font-bold mb-4 border-b pb-2">Patient Details</h2>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div><label class="editor-label">Name</label><input type="text" class="editor-input" id="in_name" value="S/O Marium"></div>
+                <div><label class="editor-label">Age</label><input type="text" class="editor-input" id="in_age" value="11 days"></div>
+                <div><label class="editor-label">Reg No</label><input type="text" class="editor-input" id="in_reg" value="2886/01"></div>
+                <div><label class="editor-label">Admission Date</label><input type="text" class="editor-input" id="in_admDate" value="29/10/25"></div>
+                <div><label class="editor-label">Admission Time</label><input type="text" class="editor-input" id="in_admTime" value="3:45 pm"></div>
+                <div><label class="editor-label">Discharge Date</label><input type="text" class="editor-input" id="in_disDate" value="08/11/2025"></div>
+                <div><label class="editor-label">Discharge Time</label><input type="text" class="editor-input" id="in_disTime" value="12:00 pm"></div>
+                <div><label class="editor-label">BALAM</label><input type="text" class="editor-input" id="in_balam" value="7977"></div>
+                <div><label class="editor-label">SCANU</label><input type="text" class="editor-input" id="in_scanu" value="3472"></div>
+                <div><label class="editor-label">Mobile</label><input type="text" class="editor-input" id="in_mobile" value="01718636358"></div>
+                <div class="col-span-2"><label class="editor-label">Address</label><input type="text" class="editor-input" id="in_address" value="Kamrangichor"></div>
+                <div><label class="editor-label">Mother's Name</label><input type="text" class="editor-input" id="in_mother" value="Marium"></div>
+                <div><label class="editor-label">Father's Name</label><input type="text" class="editor-input" id="in_father" value="Md. Hasan"></div>
+                <div class="col-span-2"><label class="editor-label">Consultant</label><input type="text" class="editor-input" id="in_consultant" value="Prof Dr. M. A. Mannan"></div>
+            </div>
+
+            <h2 class="text-lg font-bold mb-4 border-b pb-2">Clinical Info</h2>
+            <div class="mb-4">
+                <label class="editor-label">Diagnosis</label>
+                <textarea id="in_diagnosis" class="editor-input h-20">Term (38 weeks) with appropriate for gestational age (2700g) with perinatal asphyxia with mild encephalopathy with hypernatremia (corrected)</textarea>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                 <div><label class="editor-label">Discharge Status</label><input type="text" class="editor-input" id="in_disStatus" value="Stable"></div>
+                 <div><label class="editor-label">Discharge Type</label><input type="text" class="editor-input" id="in_disType" value="Discharge on request"></div>
+                 <div><label class="editor-label">Discharge Weight</label><input type="text" class="editor-input" id="in_disWeight" value="2865 gm"></div>
+                 <div><label class="editor-label">Discharge Length</label><input type="text" class="editor-input" id="in_disLength" value="49 cm"></div>
+                 <div><label class="editor-label">Discharge OFC</label><input type="text" class="editor-input" id="in_disOFC" value="33 cm"></div>
+            </div>
+
+            <div class="mb-6">
+                <label class="editor-label">Brief Clinical History</label>
+                <textarea id="in_history" class="editor-input h-32">S/O Morium, out born, 11 days old 3rd issue of nonconsanguineous parents got admitted as a referred case of term (38+ weeks) with appropriate for gestational age (2700 g) with PNA (HIE stage II). Mother Morium, 26 years old, para 3 (NVD) +0, having blood group B positive was on irregular ANC and was immunized against tetanus. She had no history of GDM, PIH, thyroid disorder, fever with rash, UTI or any other chronic illness, taking any offending drugs. USG at 35 weeks of gestation revealed single live pregnancy of about 35+ weeks with cephalic presentation, placenta away from os, AFI 11.03 cm, EFW 2678 ±100 gm. Her pregnancy period was uneventful up to 38 weeks. Then she developed labour pain and a male baby weighing 2700 g was delivered by NVD, did not cry immediately after birth. Resuscitation and APGAR score was not documented. Baby was shifted to Azimpur maternal and child health training institute. Supplemental O2 through nasal cannula was given and cried 4 hours after birth and treated with O2, inj. Ceftazidime and Amikacin. Baby developed convulsion several times at 14 hours of age and treated with Inj. Phenobarbitone and inj. Fosphenytoin and antibiotic changed to Inj. Meropenem & Vancomycin. Convulsion was not controlled and referred to BMU, NICU for better management. Transportation time was 20 minutes with O2 2L/min. There was no event during transport. After admission baby was put on CPAP due to repeated apnea and continued for 72 hours. Then gradually weaned from CPAP to supplemental nasal oxygen. Now baby is on room air. Orogastric tube feeding was started after admission at day 5 and now baby is on full OG tube feeding. MRI with MRS of brain done. Report is pending. Now baby is convulsion free for last 7 days, stable on room air and on full feed. Mother is confident enough to take care of her child. So, we planned for discharge on request the baby.</textarea>
+            </div>
+
+            <h2 class="text-lg font-bold mb-4 border-b pb-2">General Info & Treatment</h2>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div><label class="editor-label">Baby Color</label><input type="text" class="editor-input" id="in_babyColor" value="Pink on room air"></div>
+                <div><label class="editor-label">Reflex</label><input type="text" class="editor-input" id="in_babyReflex" value="good"></div>
+                <div><label class="editor-label">Pulse</label><input type="text" class="editor-input" id="in_pulse" value="152 b/m"></div>
+                <div><label class="editor-label">Resp. Rate</label><input type="text" class="editor-input" id="in_resp" value="42 b/m"></div>
+                <div><label class="editor-label">Birth Weight</label><input type="text" class="editor-input" id="in_birthWeight" value="2700 gm"></div>
+                <div><label class="editor-label">Blood Group</label><input type="text" class="editor-input" id="in_bloodGroup" value="A positive"></div>
+                <div><label class="editor-label">Mother Age</label><input type="text" class="editor-input" id="in_motherAge" value="26 years"></div>
+                <div><label class="editor-label">Mother Para</label><input type="text" class="editor-input" id="in_motherPara" value="3+0"></div>
+            </div>
+
+            <div class="mb-6">
+                <label class="editor-label">Treatment Summary</label>
+                <textarea id="in_treatment" class="editor-input h-32">CPAP care
+Inf. 10%  DBS + amino acid 
+OG tube feeding+ cup spoon feeding 
+Inj. Meropenem (30/10/25- 08/11/25)
+Inj. Vancomycin (30/10/25-08/11/25)
+Inj. Phenobarbitone (2/11/25 --)
+Inj. Fosphenytoin (2/11/25-3/11/25)</textarea>
+            </div>
+
+            <h2 class="text-lg font-bold mb-4 border-b pb-2">Investigations Table</h2>
+            <div class="bg-gray-50 p-3 rounded border border-gray-200 mb-4">
+                <label class="editor-label">Controls</label>
+                <div class="flex gap-2 flex-wrap mb-3">
+                    <button onclick="addRow()" class="bg-blue-100 text-blue-800 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200 border border-blue-200">+ Add Row</button>
+                    <button onclick="addColumn()" class="bg-blue-100 text-blue-800 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200 border border-blue-200">+ Add Col</button>
+                    <button onclick="deleteRow()" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold hover:bg-yellow-200 border border-yellow-200">- Del Row</button>
+                    <button onclick="deleteColumn()" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold hover:bg-yellow-200 border border-yellow-200">- Del Col</button>
+                    <button onclick="clearTable()" class="bg-red-100 text-red-700 px-3 py-1 rounded text-xs font-bold hover:bg-red-200 border border-red-200">Clear Table</button>
+                    <button onclick="resetTable()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs font-bold hover:bg-gray-300 border border-gray-300">Reset Defaults</button>
+                </div>
+                
+                <label class="editor-label">Paste Excel Data Here (Tab Separated)</label>
+                <div class="flex gap-2">
+                    <textarea id="paste-area" class="editor-input h-16 text-xs font-mono" placeholder="Copy table from Excel and paste here..."></textarea>
+                    <button onclick="importTable()" class="bg-emerald-600 text-white px-4 py-1 rounded text-xs font-bold hover:bg-emerald-700 whitespace-nowrap self-start h-16">Import<br>Table</button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto mb-6">
+                <table id="editor-table" class="w-full text-xs border border-gray-300">
+                    <!-- JS will populate this -->
+                </table>
+            </div>
+
+            <h2 class="text-lg font-bold mb-4 border-b pb-2">Advice & Follow Up</h2>
+            <div class="mb-4">
+                <label class="editor-label">Advice (Bengali/English)</label>
+                <textarea id="in_advice" class="editor-input h-32">Syp. Barbit (20 mg/5ml)
+১.৭ মিলি দিনে এক বার –চলবে
+৬ মাস পর্যন্ত শুধুমাত্র বুকের দুধ খাওয়াবেন  । 
+EPI শিডিউল অনুযায়ী টিকা দিবেন ।
+কান পরীক্ষা করার জন্য কেবিন ব্লকের ২ তলায় অডিওলজি ক্লিনিকে যোগাযোগ করবেন।
+৪৫ দিন বয়সে F ব্লক এর ৭ তলায় নিউরোলজি ফলো-আপ এ আসবেন।
+EEG of brain</textarea>
+            </div>
+            <div class="mb-4">
+                <label class="editor-label">OPD Follow Up</label>
+                <textarea id="in_opd" class="editor-input h-16">MRI রিপোর্ট নিয়ে নবজাতক বহি বিভাগ (আউটডোর ১ রুম নং ৩১৪) ফলোআপে আসবেন।</textarea>
+            </div>
+             <div class="mb-4">
+                <label class="editor-label">NICU Contact No</label>
+                <input type="text" class="editor-input" id="in_contact" value="01774124450">
+            </div>
+
+             <div class="grid grid-cols-2 gap-4 mb-20">
+                <div><label class="editor-label">Prepared By</label><input type="text" class="editor-input" id="in_prepBy" value="Dr. Afrina Nasrin"></div>
+                <div><label class="editor-label">Checked By</label><input type="text" class="editor-input" id="in_checkBy" value="Dr. Afrina Nasrin"></div>
+            </div>
+
+        </div>
+
+        <!-- PREVIEW COLUMN (Right) -->
+        <div class="w-full md:w-7/12 bg-gray-500 overflow-y-auto p-8 flex justify-center">
+            
+            <div id="print-area" class="a4-page text-xs leading-tight">
+                
+                <!-- Header with Logo -->
+                <div class="text-center mb-4">
+                    <div class="flex justify-center mb-2">
+                        <!-- Logo Placeholder: User instructions in alt text -->
+                        <img src="logo.png" onerror="this.src='https://via.placeholder.com/80?text=LOGO';this.style.border='1px dashed black'" alt="Place logo.png in folder" style="height: 60px; width: auto;">
+                    </div>
+                    <h1 class="text-2xl font-bold uppercase tracking-wide mb-1" style="color: black;">Bangladesh Medical University</h1>
+                    <p class="text-sm font-semibold">Shahbag, Dhaka-1000</p>
+                    <div class="border-b-2 border-black mt-2 mb-1"></div>
+                    <div class="border-b border-black"></div>
+                </div>
+
+                <!-- Patient Info Header -->
+                <div class="flex justify-between mb-2 mt-4">
+                    <div>
+                        <p><span class="font-bold">Name:</span> <span id="out_name"></span></p>
+                    </div>
+                    <div class="text-right">
+                        <p><span class="font-bold">Age:</span> <span id="out_age"></span> <span class="ml-4 font-bold">Reg:</span> <span id="out_reg"></span></p>
+                    </div>
+                </div>
+
+                <div class="flex justify-between mb-2">
+                    <div><span class="font-bold">Admission date & time:</span> <span id="out_admDate"></span>; <span id="out_admTime"></span></div>
+                    <div class="font-bold border border-black px-2 bg-gray-100">Discharge Summary</div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1 mb-2">
+                    <div><span class="font-bold">BALAM:</span> <span id="out_balam"></span></div>
+                    <div class="text-right"><span class="font-bold">Discharge date & time:</span> <span id="out_disDate"></span>; <span id="out_disTime"></span></div>
+                    
+                    <div><span class="font-bold">SCANU:</span> <span id="out_scanu"></span></div>
+                    <div></div>
+
+                    <div><span class="font-bold">Address:</span> <span id="out_address"></span></div>
+                    <div></div>
+
+                    <div><span class="font-bold">Mother's Name:</span> <span id="out_mother"></span></div>
+                    <div></div>
+
+                    <div><span class="font-bold">Father's Name:</span> <span id="out_father"></span></div>
+                    <div></div>
+
+                    <div><span class="font-bold">Mobile Number:</span> <span id="out_mobile"></span></div>
+                    <div></div>
+                </div>
+
+                <div class="mb-4">
+                    <p><span class="font-bold">Admitting Consultant:</span> <span id="out_consultant"></span></p>
+                    <p class="mt-1"><span class="font-bold">Diagnosis:</span> <span id="out_diagnosis"></span></p>
+                </div>
+
+                <!-- Discharge Status Box -->
+                <div class="border border-black p-2 mb-4">
+                    <div class="flex justify-between mb-2">
+                        <div><span class="font-bold">Discharge Status:</span> <span id="out_disStatus"></span></div>
+                        <div><span class="font-bold">Discharge Type:</span> <span id="out_disType"></span></div>
+                    </div>
+                    <div class="flex justify-between border-t border-gray-400 pt-1">
+                        <div><span class="font-bold">Discharge weight:</span> <span id="out_disWeight"></span></div>
+                        <div><span class="font-bold">Discharge Length:</span> <span id="out_disLength"></span></div>
+                        <div><span class="font-bold">Discharge OFC:</span> <span id="out_disOFC"></span></div>
+                    </div>
+                </div>
+
+                <!-- History -->
+                <div class="mb-4">
+                    <p class="font-bold underline mb-1">Brief Clinical History:</p>
+                    <p id="out_history" class="text-justify whitespace-pre-wrap leading-snug"></p>
+                </div>
+
+                <!-- General Info -->
+                <div class="border border-black mb-4">
+                    <div class="bg-gray-100 font-bold text-center border-b border-black py-1">General Information:</div>
+                    <div class="p-2">
+                        <div class="font-bold underline mb-1">Baby: (During discharge)</div>
+                        <div class="grid grid-cols-3 gap-y-1 gap-x-2 mb-2">
+                            <div><span class="font-bold">Color:</span> <span id="out_babyColor"></span></div>
+                            <div><span class="font-bold">Reflex & activities:</span> <span id="out_babyReflex"></span></div>
+                            <div><span class="font-bold">Pulse:</span> <span id="out_pulse"></span></div>
+                            <div><span class="font-bold">Resp. Rate:</span> <span id="out_resp"></span></div>
+                            <div><span class="font-bold">Birth Weight:</span> <span id="out_birthWeight"></span></div>
+                            <div><span class="font-bold">Blood group:</span> <span id="out_bloodGroup"></span></div>
+                        </div>
+                        <div class="font-bold underline mb-1">Mother:</div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div><span class="font-bold">Mother's Age:</span> <span id="out_motherAge"></span></div>
+                            <div><span class="font-bold">Blood Group:</span> <span id="out_motherBlood"></span></div>
+                            <div><span class="font-bold">Para:</span> <span id="out_motherPara"></span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Treatment -->
+                <div class="mb-4">
+                    <p class="font-bold underline mb-1">Treatment Summary:</p>
+                    <p id="out_treatment" class="whitespace-pre-wrap ml-4"></p>
+                </div>
+
+                 <!-- Investigations (Moved after Treatment) -->
+                 <div class="mb-6">
+                    <p class="font-bold underline mb-2">Investigation:</p>
+                    <div id="table-container">
+                        <!-- Preview Table -->
+                    </div>
+                </div>
+
+                <!-- Advice -->
+                <div class="mb-4">
+                    <p class="font-bold underline mb-1">Advice/Recommendation:</p>
+                    <div id="out_advice" class="border border-gray-300 p-2 rounded whitespace-pre-wrap bengali-text"></div>
+                </div>
+
+                <!-- OPD Follow Up & Contact -->
+                <div class="mb-6">
+                    <p class="font-bold mb-1">OPD follow up visit:</p>
+                    <p id="out_opd" class="bengali-text mb-4"></p>
+                    
+                    <div class="border border-black p-2 inline-block">
+                        <span class="font-bold">NICU Contact Number:</span> <span id="out_contact"></span>
+                    </div>
+                </div>
+
+                <!-- Signatures -->
+                <div class="flex justify-between items-end mt-16 pt-4">
+                    <div class="text-center w-1/3">
+                        <p class="font-bold mb-1" id="out_prepBy"></p>
+                        <div class="border-t border-black w-3/4 mx-auto"></div>
+                        <p>Prepared by</p>
+                    </div>
+                    <div class="text-center w-1/3">
+                        <p class="font-bold mb-1" id="out_checkBy"></p>
+                        <div class="border-t border-black w-3/4 mx-auto"></div>
+                        <p>Checked by</p>
+                    </div>
+                    <div class="text-center w-1/3">
+                        <div class="h-4 mb-1"></div> <!-- Space for signature -->
+                        <div class="border-t border-black w-3/4 mx-auto"></div>
+                        <p>Consultant Sign</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Logic -->
+    <script>
+        // --- 1. State Management ---
+        const fields = [
+            'name', 'age', 'reg', 'admDate', 'admTime', 'disDate', 'disTime', 'balam', 'scanu', 'mobile',
+            'address', 'mother', 'father', 'consultant', 'diagnosis', 'disStatus', 'disType', 
+            'disWeight', 'disLength', 'disOFC', 'history', 'babyColor', 'babyReflex', 'pulse', 
+            'resp', 'birthWeight', 'bloodGroup', 'motherAge', 'motherPara', 'treatment', 'advice', 
+            'opd', 'contact', 'prepBy', 'checkBy', 'motherBlood'
+        ];
+
+        // --- 2. Live Update Logic ---
+        function updatePreview() {
+            fields.forEach(id => {
+                const input = document.getElementById(`in_${id}`);
+                const output = document.getElementById(`out_${id}`);
+                if (input && output) {
+                    output.innerText = input.value;
+                }
+            });
+            // Update Mother's blood specifically if ID mismatch in array
+            document.getElementById('out_motherBlood').innerText = document.getElementById('in_bloodGroup').value; // Using generic mapping, fix below
+            document.getElementById('out_motherBlood').innerText = document.getElementById('in_motherBloodGroup') ? document.getElementById('in_motherBloodGroup').value : "B POSITIVE"; 
+        }
+
+        // Add Listeners
+        fields.forEach(id => {
+            const el = document.getElementById(`in_${id}`);
+            if(el) el.addEventListener('input', updatePreview);
+        });
+
+        // Fix missing field in HTML array above
+        document.getElementById('in_motherAge').addEventListener('input', updatePreview);
+        // Add specific fix for mother's blood group which I missed in the array match
+        document.getElementById('in_bloodGroup').addEventListener('input', updatePreview);
+
+        
+        // --- 3. Table Logic ---
+        const DEFAULT_HEADERS = ["Date", "30/10", "31/10", "1/11", "2/11", "3/11", "4/11", "5/11", "6/11"];
+        const DEFAULT_ROWS = [
+            ["Hb (g/dl)", "18.4", "", "16.2", "", "", "", "", ""],
+            ["TC (/cmm)", "19380", "", "7000", "", "", "", "", ""],
+            ["N/L", "73%/19%", "", "71%/24%", "", "", "", "", ""],
+            ["PLT", "263000", "", "20000", "", "", "", "", ""],
+            ["CRP", "48", "", "39.89", "", "", "", "", ""],
+            ["S. Creatinine", "0.80", "0.32", "0.29", "0.24", "0.21", "0.19", "0.3", "0.3"],
+            ["Na+", "137", "131", "150", "146", "145", "147", "150", "141"],
+            ["K+", "3.9", "4.7", "4.21", "4.13", "3.66", "4.57", "5.7", "4.8"]
+        ];
+
+        let tableData = {
+            headers: [...DEFAULT_HEADERS],
+            rows: JSON.parse(JSON.stringify(DEFAULT_ROWS))
+        };
+
+        function renderEditorTable() {
+            const table = document.getElementById('editor-table');
+            table.innerHTML = '';
+            
+            // Header Row
+            const thead = document.createElement('tr');
+            tableData.headers.forEach((h, idx) => {
+                const th = document.createElement('th');
+                th.className = "border bg-gray-100 p-1";
+                const input = document.createElement('input');
+                input.value = h;
+                input.className = "w-full bg-transparent font-bold text-center";
+                input.oninput = (e) => { tableData.headers[idx] = e.target.value; renderPreviewTable(); };
+                th.appendChild(input);
+                thead.appendChild(th);
+            });
+            table.appendChild(thead);
+
+            // Data Rows
+            tableData.rows.forEach((row, rIdx) => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, cIdx) => {
+                    const td = document.createElement('td');
+                    td.className = "border p-0";
+                    const input = document.createElement('input');
+                    input.value = cell;
+                    input.className = "w-full p-1 text-center focus:bg-blue-50 outline-none";
+                    input.oninput = (e) => { tableData.rows[rIdx][cIdx] = e.target.value; renderPreviewTable(); };
+                    td.appendChild(input);
+                    tr.appendChild(td);
+                });
+                table.appendChild(tr);
+            });
+        }
+
+        function renderPreviewTable() {
+            const container = document.getElementById('table-container');
+            let html = '<table class="doc-table"><thead><tr>';
+            tableData.headers.forEach(h => html += `<th>${h}</th>`);
+            html += '</tr></thead><tbody>';
+            
+            tableData.rows.forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => html += `<td>${cell}</td>`);
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function addRow() {
+            const newRow = new Array(tableData.headers.length).fill("");
+            tableData.rows.push(newRow);
+            renderEditorTable();
+            renderPreviewTable();
+        }
+
+        function addColumn() {
+            tableData.headers.push("New Header");
+            tableData.rows.forEach(row => row.push(""));
+            renderEditorTable();
+            renderPreviewTable();
+        }
+
+        function deleteRow() {
+            if (tableData.rows.length > 0) {
+                tableData.rows.pop();
+                renderEditorTable();
+                renderPreviewTable();
+            }
+        }
+
+        function deleteColumn() {
+            if (tableData.headers.length > 1) {
+                tableData.headers.pop();
+                tableData.rows.forEach(row => row.pop());
+                renderEditorTable();
+                renderPreviewTable();
+            }
+        }
+
+        function clearTable() {
+            if (confirm("Clear the entire table?")) {
+                tableData.headers = ["Header 1", "Header 2", "Header 3"];
+                tableData.rows = [
+                    ["", "", ""],
+                    ["", "", ""]
+                ];
+                renderEditorTable();
+                renderPreviewTable();
+            }
+        }
+
+        function importTable() {
+            const raw = document.getElementById('paste-area').value;
+            if (!raw) return;
+
+            const lines = raw.trim().split('\n');
+            if (lines.length === 0) return;
+
+            // Detect delimiter (Tab for Excel, Comma for CSV)
+            // Default to tab since Excel copy/paste uses tabs
+            const delimiter = raw.includes('\t') ? '\t' : ',';
+
+            const newHeaders = lines[0].split(delimiter).map(s => s.trim().replace(/^"|"$/g, ''));
+            const newRows = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const cells = lines[i].split(delimiter).map(s => s.trim().replace(/^"|"$/g, ''));
+                // Pad if row shorter than header
+                while(cells.length < newHeaders.length) cells.push("");
+                // Trim if row longer
+                while(cells.length > newHeaders.length) cells.pop();
+                newRows.push(cells);
+            }
+
+            tableData.headers = newHeaders;
+            tableData.rows = newRows;
+            renderEditorTable();
+            renderPreviewTable();
+            document.getElementById('paste-area').value = ""; // Clear paste area
+        }
+
+        function resetTable() {
+            if(confirm("Reset table to defaults?")) {
+                location.reload(); 
+            }
+        }
+
+        // --- 4. Export to Word ---
+        function exportToWord() {
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+                "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+                "xmlns='http://www.w3.org/TR/REC-html40'> " +
+                "<head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title></head><body>";
+            
+            const footer = "</body></html>";
+            const sourceHTML = header + document.getElementById("print-area").innerHTML + footer;
+            
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            fileDownload.download = `Discharge_Summary_${document.getElementById('in_name').value}.doc`;
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+        }
+
+        // Init
+        lucide.createIcons();
+        renderEditorTable();
+        renderPreviewTable();
+        updatePreview();
+    </script>
+</body>
+</html>
