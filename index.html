@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NICU Discharge Summary Generator</title>
+    <!-- Tailwind CSS -->
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <!-- Lucide Icons -->
+    <script src="[https://unpkg.com/lucide@latest](https://unpkg.com/lucide@latest)"></script>
+    <!-- DOCX Generation Libraries (Critical for download) -->
+    <script src="[https://unpkg.com/docx@7.1.0/build/index.js](https://unpkg.com/docx@7.1.0/build/index.js)"></script>
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js](https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js)"></script>
+
+    <style>
+        @import url('[https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Times+New+Roman&display=swap](https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Times+New+Roman&display=swap)');
+
+        body { font-family: 'Times New Roman', Times, serif; color: black; }
+        .bengali-text { font-family: 'Noto Sans Bengali', sans-serif; }
+
+        /* Editor Styles */
+        .editor-input { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; font-size: 0.875rem; }
+        .editor-label { display: block; font-family: sans-serif; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: #4b5563; margin-bottom: 0.25rem; }
+
+        /* A4 Page Layout */
+        .a4-page {
+            width: 210mm; min-height: 297mm; background: white; padding: 15mm;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); margin: 0 auto; position: relative; color: black;
+        }
+        
+        /* Layout Tables for Preview */
+        table.layout-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+        table.layout-table td { vertical-align: top; padding: 2px; }
+        
+        /* Data Tables */
+        table.data-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; }
+        table.data-table th, table.data-table td { border: 1px solid black; padding: 4px; text-align: center; }
+        table.data-table th { background-color: #f3f4f6; font-weight: bold; }
+        table.data-table td:first-child { text-align: left; font-weight: bold; }
+
+        @media print {
+            body { background: white; }
+            .no-print { display: none !important; }
+            .a4-page { box-shadow: none; margin: 0; padding: 10mm; width: 100%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- Navbar -->
+    <nav class="bg-gray-900 text-white p-4 shadow-md flex justify-between items-center no-print z-10">
+        <div class="flex items-center gap-2">
+            <i data-lucide="file-text"></i>
+            <h1 class="text-xl font-bold font-sans">NICU Discharge Generator</h1>
+        </div>
+        <div class="flex gap-2">
+            <!-- DOWNLOAD BUTTON -->
+            <button onclick="generateDocx()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition shadow-lg ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900">
+                <i data-lucide="download"></i> Download .DOCX (Word)
+            </button>
+            <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition">
+                <i data-lucide="printer"></i> Print / PDF
+            </button>
+        </div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Editor (Left) -->
+        <div class="w-full md:w-5/12 bg-white border-r border-gray-300 overflow-y-auto p-6 no-print font-sans">
+            <!-- Patient Details -->
+            <h2 class="text-lg font-bold mb-4 border-b pb-2">Patient Details</h2>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div><label class="editor-label">Name</label><input type="text" class="editor-input" id="in_name" value="S/O Marium"></div>
+                <div><label class="editor-label">Age</label><input type="text" class="editor-input" id="in_age" value="11 days"></div>
+                <div><label class="editor-label">Reg No</label><input type="text" class="editor-input" id="in_reg" value="2886/01"></div>
+                <div><label class="editor-label">Admission Date</label><input type="text" class="editor-input" id="in_admDate" value="29/10/25"></div>
+                <div><label class="editor-label">Admission Time</label><input type="text" class="editor-input" id="in_admTime" value="3:45 pm"></div>
+                <div><label class="editor-label">Discharge Date</label><input type="text" class="editor-input" id="in_disDate" value="08/11/2025"></div>
+                <div><label class="editor-label">Discharge Time</label><input type="text" class="editor-input" id="in_disTime" value="12:00 pm"></div>
+                <div><label class="editor-label">BALAM</label><input type="text" class="editor-input" id="in_balam" value="7977"></div>
+                <div><label class="editor-label">SCANU</label><input type="text" class="editor-input" id="in_scanu" value="3472"></div>
+                <div><label class="editor-label">Mobile</label><input type="text" class="editor-input" id="in_mobile" value="01718636358"></div>
+                <div class="col-span-2"><label class="editor-label">Address</label><input type="text" class="editor-input" id="in_address" value="Kamrangichor"></div>
+                <div><label class="editor-label">Mother's Name</label><input type="text" class="editor-input" id="in_mother" value="Marium"></div>
+                <div><label class="editor-label">Father's Name</label><input type="text" class="editor-input" id="in_father" value="Md. Hasan"></div>
+                <div class="col-span-2"><label class="editor-label">Consultant</label><input type="text" class="editor-input" id="in_consultant" value="Prof Dr. M. A. Mannan"></div>
+            </div>
+
+            <h2 class="text-lg font-bold mb-4 border-b pb-2">Clinical Info</h2>
+            <div class="mb-4">
+                <label class="editor-label">Diagnosis</label>
+                <textarea id="in_diagnosis" class="editor-input h-20">Term (38 weeks) with appropriate for gestational age (2700g) with perinatal asphyxia with mild encephalopathy with hypernatremia (corrected)</textarea>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                 <div><label class="editor-label">Discharge Status</label><input type="text" class="editor-input" id="in_disStatus" value="Stable"></div>
+                 <div><label class="editor-label">Discharge Type</label><input type="text" class="editor-input" id="in_disType" value="Discharge on request"></div>
+                 <div><label class="editor-label">Discharge Weight</label><input type="text" class="editor-input" id="in_disWeight" value="2865 gm"></div>
+                 <div><label class="editor-label">Discharge Length</label><input type="text" class="editor-input" id="in_disLength" value="49 cm"></div>
+                 <div><label class="editor-label">Discharge OFC</label><input type="text" class="editor-input" id="in_disOFC" value="33 cm"></div>
+            </div>
+
+            <div class="mb-6">
+                <label class="editor-label">Brief Clinical History</label>
+                <textarea id="in_history" class="editor-input h-32">S/O Morium, out born, 11 days old 3rd issue of nonconsanguineous parents got admitted as a referred case of term (38+ weeks) with appropriate for gestational age (2700 g) with PNA (HIE stage II). Mother Morium, 26 years old, para 3 (NVD) +0, having blood group B positive was on irregular ANC and was immunized against tetanus. She had no history of GDM, PIH, thyroid disorder, fever with rash, UTI or any other chronic illness, taking any offending drugs. USG at 35 weeks of gestation revealed single live pregnancy of about 35+ weeks with cephalic presentation, placenta away from os, AFI 11.03 cm, EFW 2678 ±100 gm. Her pregnancy period was uneventful up to 38 weeks. Then she developed labour pain and a male baby weighing 2700 g was delivered by NVD, did not cry immediately after birth. Resuscitation and APGAR score was not documented. Baby was shifted to Azimpur maternal and child health training institute. Supplemental O2 through nasal cannula was given and cried 4 hours after birth and treated with O2, inj. Ceftazidime and Amikacin. Baby developed convulsion several times at 14 hours of age and treated with Inj. Phenobarbitone and inj. Fosphenytoin and antibiotic changed to Inj. Meropenem & Vancomycin. Convulsion was not controlled and referred to BMU, NICU for better management. Transportation time was 20 minutes with O2 2L/min. There was no event during transport. After admission baby was put on CPAP due to repeated apnea and continued for 72 hours. Then gradually weaned from CPAP to supplemental nasal oxygen. Now baby is on room air. Orogastric tube feeding was started after admission at day 5 and now baby is on full OG tube feeding. MRI with MRS of brain done. Report is pending. Now baby is convulsion free for last 7 days, stable on room air and on full feed. Mother is confident enough to take care of her child. So, we planned for discharge on request the baby.</textarea>
+            </div>
+
+            <h2 class="text-lg font-bold mb-4 border-b pb-2">General Info & Treatment</h2>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div><label class="editor-label">Baby Color</label><input type="text" class="editor-input" id="in_babyColor" value="Pink on room air"></div>
+                <div><label class="editor-label">Reflex</label><input type="text" class="editor-input" id="in_babyReflex" value="good"></div>
+                <div><label class="editor-label">Pulse</label><input type="text" class="editor-input" id="in_pulse" value="152 b/m"></div>
+                <div><label class="editor-label">Resp. Rate</label><input type="text" class="editor-input" id="in_resp" value="42 b/m"></div>
+                <div><label class="editor-label">Birth Weight</label><input type="text" class="editor-input" id="in_birthWeight" value="2700 gm"></div>
+                <div><label class="editor-label">Blood Group</label><input type="text" class="editor-input" id="in_bloodGroup" value="A positive"></div>
+                <div><label class="editor-label">Mother Age</label><input type="text" class="editor-input" id="in_motherAge" value="26 years"></div>
+                <div><label class="editor-label">Mother Para</label><input type="text" class="editor-input" id="in_motherPara" value="3+0"></div>
+            </div>
+
+            <div class="mb-6">
+                <label class="editor-label">Treatment Summary</label>
+                <textarea id="in_treatment" class="editor-input h-32">CPAP care
+Inf. 10%  DBS + amino acid 
+OG tube feeding+ cup spoon feeding 
+Inj. Meropenem (30/10/25- 08/11/25)
+Inj. Vancomycin (30/10/25-08/11/25)
+Inj. Phenobarbitone (2/11/25 --)
+Inj. Fosphenytoin (2/11/25-3/11/25)</textarea>
+            </div>
+
+            <h2 class="text-lg font-bold mb-4 border-b pb-2">Investigations Table</h2>
+             <div class="bg-gray-50 p-3 rounded border border-gray-200 mb-4">
+                <label class="editor-label">Controls</label>
+                <div class="flex gap-2 flex-wrap mb-3">
+                    <button onclick="addRow()" class="bg-blue-100 text-blue-800 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200 border border-blue-200">+ Add Row</button>
+                    <button onclick="addColumn()" class="bg-blue-100 text-blue-800 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200 border border-blue-200">+ Add Col</button>
+                    <button onclick="deleteRow()" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold hover:bg-yellow-200 border border-yellow-200">- Del Row</button>
+                    <button onclick="deleteColumn()" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold hover:bg-yellow-200 border border-yellow-200">- Del Col</button>
+                    <button onclick="clearTable()" class="bg-red-100 text-red-700 px-3 py-1 rounded text-xs font-bold hover:bg-red-200 border border-red-200">Clear Table</button>
+                    <button onclick="resetTable()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs font-bold hover:bg-gray-300 border border-gray-300">Reset Defaults</button>
+                </div>
+                
+                <label class="editor-label">Paste Excel Data</label>
+                <div class="flex gap-2">
+                    <textarea id="paste-area" class="editor-input h-16 text-xs font-mono" placeholder="Copy table from Excel and paste here..."></textarea>
+                    <button onclick="importTable()" class="bg-emerald-600 text-white px-4 py-1 rounded text-xs font-bold hover:bg-emerald-700 whitespace-nowrap self-start h-16">Import</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto mb-6">
+                <table id="editor-table" class="w-full text-xs border border-gray-300"></table>
+            </div>
+
+            <h2 class="text-lg font-bold mb-4 border-b pb-2">Advice & Follow Up</h2>
+            <div class="mb-4">
+                <label class="editor-label">Advice (Bengali/English)</label>
+                <textarea id="in_advice" class="editor-input h-32">Syp. Barbit (20 mg/5ml)
+১.৭ মিলি দিনে এক বার –চলবে
+৬ মাস পর্যন্ত শুধুমাত্র বুকের দুধ খাওয়াবেন  । 
+EPI শিডিউল অনুযায়ী টিকা দিবেন ।
+কান পরীক্ষা করার জন্য কেবিন ব্লকের ২ তলায় অডিওলজি ক্লিনিকে যোগাযোগ করবেন।
+৪৫ দিন বয়সে F ব্লক এর ৭ তলায় নিউরোলজি ফলো-আপ এ আসবেন।
+EEG of brain</textarea>
+            </div>
+            <div class="mb-4">
+                <label class="editor-label">OPD Follow Up</label>
+                <textarea id="in_opd" class="editor-input h-16">MRI রিপোর্ট নিয়ে নবজাতক বহি বিভাগ (আউটডোর ১ রুম নং ৩১৪) ফলোআপে আসবেন।</textarea>
+            </div>
+             <div class="mb-4">
+                <label class="editor-label">NICU Contact No</label>
+                <input type="text" class="editor-input" id="in_contact" value="01774124450">
+            </div>
+
+             <div class="grid grid-cols-2 gap-4 mb-20">
+                <div><label class="editor-label">Prepared By</label><input type="text" class="editor-input" id="in_prepBy" value="Dr. Afrina Nasrin"></div>
+                <div><label class="editor-label">Checked By</label><input type="text" class="editor-input" id="in_checkBy" value="Dr. Afrina Nasrin"></div>
+            </div>
+        </div>
+
+        <!-- Preview (Right) -->
+        <div class="w-full md:w-7/12 bg-gray-500 overflow-y-auto p-8 flex justify-center">
+            <div id="print-area" class="a4-page text-xs leading-tight">
+                
+                <!-- Header -->
+                <div class="text-center mb-4">
+                    <!-- <img src="logo.png" onerror="this.style.display='none'" class="h-16 w-auto mx-auto mb-2" alt="Logo"> -->
+                    <h1 class="text-2xl font-bold uppercase tracking-wide mb-1">Bangladesh Medical University</h1>
+                    <p class="text-sm font-semibold">Shahbag, Dhaka-1000</p>
+                    <div class="border-b-2 border-black mt-2 mb-1"></div>
+                    <div class="border-b border-black"></div>
+                </div>
+
+                <!-- Patient Info Table -->
+                <table class="layout-table">
+                    <tr>
+                        <td class="w-1/2"><b>Name:</b> <span id="out_name"></span></td>
+                        <td class="w-1/2 text-right"><b>Age:</b> <span id="out_age"></span> <span class="ml-4"><b>Reg:</b> <span id="out_reg"></span></span></td>
+                    </tr>
+                    <tr>
+                        <td><b>Admission date & time:</b> <span id="out_admDate"></span>; <span id="out_admTime"></span></td>
+                        <td class="text-right"></td>
+                    </tr>
+                </table>
+
+                <div class="font-bold border border-black px-2 bg-gray-100 text-center mb-2 w-full">Discharge Summary</div>
+
+                <table class="layout-table">
+                    <tr>
+                        <td class="w-1/2"><b>BALAM:</b> <span id="out_balam"></span></td>
+                        <td class="w-1/2 text-right"><b>Discharge date & time:</b> <span id="out_disDate"></span>; <span id="out_disTime"></span></td>
+                    </tr>
+                    <tr><td><b>SCANU:</b> <span id="out_scanu"></span></td><td></td></tr>
+                    <tr><td><b>Address:</b> <span id="out_address"></span></td><td></td></tr>
+                    <tr><td><b>Mother's Name:</b> <span id="out_mother"></span></td><td></td></tr>
+                    <tr><td><b>Father's Name:</b> <span id="out_father"></span></td><td></td></tr>
+                    <tr><td><b>Mobile Number:</b> <span id="out_mobile"></span></td><td></td></tr>
+                    <tr><td colspan="2"><div class="h-2"></div></td></tr>
+                    <tr><td colspan="2"><b>Admitting Consultant:</b> <span id="out_consultant"></span></td></tr>
+                    <tr><td colspan="2"><b>Diagnosis:</b> <span id="out_diagnosis"></span></td></tr>
+                </table>
+
+                <!-- Status Box -->
+                <div class="border border-black p-2 mb-4">
+                    <table class="layout-table">
+                        <tr>
+                            <td><b>Discharge Status:</b> <span id="out_disStatus"></span></td>
+                            <td><b>Discharge Type:</b> <span id="out_disType"></span></td>
+                        </tr>
+                    </table>
+                    <div class="border-t border-gray-400 pt-1 mt-1">
+                        <table class="layout-table">
+                            <tr>
+                                <td><b>Wt:</b> <span id="out_disWeight"></span></td>
+                                <td><b>Length:</b> <span id="out_disLength"></span></td>
+                                <td><b>OFC:</b> <span id="out_disOFC"></span></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- History -->
+                <div class="mb-4">
+                    <p class="font-bold underline mb-1">Brief Clinical History:</p>
+                    <p id="out_history" class="text-justify whitespace-pre-wrap leading-snug"></p>
+                </div>
+
+                <!-- General Info -->
+                <div class="border border-black mb-4">
+                    <div class="bg-gray-100 font-bold text-center border-b border-black py-1">General Information:</div>
+                    <div class="p-2">
+                        <div class="font-bold underline mb-1">Baby: (During discharge)</div>
+                        <table class="layout-table">
+                            <tr>
+                                <td><b>Color:</b> <span id="out_babyColor"></span></td>
+                                <td><b>Reflex:</b> <span id="out_babyReflex"></span></td>
+                                <td><b>CRT:</b> &lt;2 sec</td>
+                            </tr>
+                            <tr>
+                                <td><b>Pulse:</b> <span id="out_pulse"></span></td>
+                                <td><b>Resp:</b> <span id="out_resp"></span></td>
+                                <td></td>
+                            </tr>
+                             <tr>
+                                <td><b>Birth Wt:</b> <span id="out_birthWeight"></span></td>
+                                <td><b>Blood Grp:</b> <span id="out_bloodGroup"></span></td>
+                                <td></td>
+                            </tr>
+                        </table>
+                        <div class="font-bold underline mb-1 mt-2">Mother:</div>
+                        <table class="layout-table">
+                            <tr>
+                                <td><b>Age:</b> <span id="out_motherAge"></span></td>
+                                <td><b>Blood Grp:</b> <span id="out_motherBlood"></span></td>
+                                <td><b>Para:</b> <span id="out_motherPara"></span></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Treatment -->
+                <div class="mb-4">
+                    <p class="font-bold underline mb-1">Treatment Summary:</p>
+                    <p id="out_treatment" class="whitespace-pre-wrap ml-4"></p>
+                </div>
+
+                <!-- Investigation -->
+                <div class="mb-6">
+                    <p class="font-bold underline mb-2">Investigation:</p>
+                    <div id="table-container"></div>
+                </div>
+
+                <!-- Advice -->
+                <div class="mb-4">
+                    <p class="font-bold underline mb-1">Advice/Recommendation:</p>
+                    <div id="out_advice" class="p-2 rounded whitespace-pre-wrap bengali-text"></div>
+                </div>
+
+                <!-- OPD -->
+                <div class="mb-6">
+                    <p class="font-bold mb-1">OPD follow up visit:</p>
+                    <p id="out_opd" class="bengali-text mb-4"></p>
+                    <div class="border border-black p-2 inline-block">
+                        <b>NICU Contact Number:</b> <span id="out_contact"></span>
+                    </div>
+                </div>
+
+                <!-- Signatures -->
+                <table class="layout-table" style="margin-top: 50px;">
+                    <tr>
+                        <td class="text-center w-1/3">
+                            <p class="font-bold" id="out_prepBy"></p>
+                            <div class="border-t border-black w-3/4 mx-auto mt-1"></div>
+                            <p>Prepared by</p>
+                        </td>
+                        <td class="text-center w-1/3">
+                            <p class="font-bold" id="out_checkBy"></p>
+                            <div class="border-t border-black w-3/4 mx-auto mt-1"></div>
+                            <p>Checked by</p>
+                        </td>
+                        <td class="text-center w-1/3">
+                            <div class="h-4"></div>
+                            <div class="border-t border-black w-3/4 mx-auto mt-1"></div>
+                            <p>Consultant Sign</p>
+                        </td>
+                    </tr>
+                </table>
+                
+                <div class="text-center text-[8px] text-gray-400 mt-8">Generated by NICU System • Bangladesh Medical University</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logic -->
+    <script>
+        const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKMAAADICAYAAACEX1EZAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAgAElEQVR42uy9d3xUde7//5w+kynpjSSkEFoEBKQEKQq4NBuKCmurtjW362l/q2tKUVxbu+s+9t4rihRK6JBOpUj0ep3398ckN5mUyQAhAb+ex4PHg8zMvfd93/d1T3md8z5vGb/J8csTkwzA+cBMYBogB5YBS4E1LFhr+22Sjl9kv01BWOADGNYEvJnABEDdya8+wPomYC4H9rBg7W9z+BsYTwqAMcAFrbRfnxM8U3mT1vQRWMmCtfW/Te5vYOwKfEpgVCvwjWmyP/bN+s+P+0BswhJkABMAm8DkZ/1f20e4x4WqXQkAAAAASUVORK5CYII=';
+
+        const fields = [
+            'name', 'age', 'reg', 'admDate', 'admTime', 'disDate', 'disTime', 'balam', 'scanu', 'mobile',
+            'address', 'mother', 'father', 'consultant', 'diagnosis', 'disStatus', 'disType', 
+            'disWeight', 'disLength', 'disOFC', 'history', 'babyColor', 'babyReflex', 'pulse', 
+            'resp', 'birthWeight', 'bloodGroup', 'motherAge', 'motherPara', 'treatment', 'advice', 
+            'opd', 'contact', 'prepBy', 'checkBy', 'motherBlood'
+        ];
+
+        function updatePreview() {
+            fields.forEach(id => {
+                const el = document.getElementById(`in_${id}`);
+                const out = document.getElementById(`out_${id}`);
+                if (el && out) out.innerText = el.value;
+            });
+            const bGrp = document.getElementById('in_bloodGroup');
+            const mBGrp = document.getElementById('out_motherBlood');
+            if(bGrp && mBGrp) mBGrp.innerText = "B POSITIVE"; // Default as per doc, or create separate input
+
+            // Update HTML logo visibility
+            const htmlLogo = document.getElementById('html-logo');
+            if (htmlLogo) {
+                // Assuming logo.png is in the same directory, it should load.
+                // The onerror handles cases where it's not found.
+                // We're just ensuring it's visible if it loads.
+                htmlLogo.style.display = 'block'; 
+            }
+        }
+
+        fields.forEach(id => {
+            const el = document.getElementById(`in_${id}`);
+            if(el) el.addEventListener('input', updatePreview);
+        });
+
+        // --- Table Logic ---
+        let tableData = {
+            headers: ["Date", "30/10", "31/10", "1/11", "2/11", "3/11", "4/11", "5/11", "6/11"],
+            rows: [
+                ["Hb (g/dl)", "18.4", "", "16.2", "", "", "", "", ""],
+                ["TC (/cmm)", "19380", "", "7000", "", "", "", "", ""],
+                ["N/L", "73%/19%", "", "71%/24%", "", "", "", "", ""],
+                ["PLT", "263000", "", "20000", "", "", "", "", ""],
+                ["CRP", "48", "", "39.89", "", "", "", "", ""],
+                ["S. Creatinine", "0.80", "0.32", "0.29", "0.24", "0.21", "0.19", "0.3", "0.3"],
+                ["Na+", "137", "131", "150", "146", "145", "147", "150", "141"],
+                ["K+", "3.9", "4.7", "4.21", "4.13", "3.66", "4.57", "5.7", "4.8"]
+            ]
+        };
+
+        function renderAll() {
+            // Editor
+            const table = document.getElementById('editor-table');
+            table.innerHTML = '';
+            const thead = document.createElement('tr');
+            tableData.headers.forEach((h, i) => {
+                const th = document.createElement('th');
+                th.className = "bg-gray-100 p-1 border";
+                const inp = document.createElement('input');
+                inp.value = h;
+                inp.className = "w-full text-center bg-transparent font-bold";
+                inp.oninput = e => { tableData.headers[i] = e.target.value; renderAll(); };
+                th.appendChild(inp);
+                thead.appendChild(th);
+            });
+            table.appendChild(thead);
+
+            tableData.rows.forEach((row, r) => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, c) => {
+                    const td = document.createElement('td');
+                    td.className = "p-0 border";
+                    const inp = document.createElement('input');
+                    inp.value = cell;
+                    inp.className = "w-full p-1 text-center outline-none focus:bg-blue-50";
+                    inp.oninput = e => { tableData.rows[r][c] = e.target.value; renderAll(); };
+                    td.appendChild(inp);
+                    tr.appendChild(td);
+                });
+                table.appendChild(tr);
+            });
+
+            // Preview
+            const container = document.getElementById('table-container');
+            let html = '<table class="data-table"><thead><tr>';
+            tableData.headers.forEach(h => html += `<th>${h}</th>`);
+            html += '</tr></thead><tbody>';
+            tableData.rows.forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => html += `<td>${cell}</td>`);
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Table controls
+        function addRow() { tableData.rows.push(new Array(tableData.headers.length).fill("")); renderAll(); }
+        function addColumn() { tableData.headers.push("New"); tableData.rows.forEach(r => r.push("")); renderAll(); }
+        function deleteRow() { if(tableData.rows.length) tableData.rows.pop(); renderAll(); }
+        function deleteColumn() { if(tableData.headers.length > 1) { tableData.headers.pop(); tableData.rows.forEach(r => r.pop()); renderAll(); } }
+        function clearTable() { if(confirm("Clear?")) { tableData.rows = [new Array(tableData.headers.length).fill("")]; renderAll(); } }
+        function resetTable() { if(confirm("Reset?")) location.reload(); }
+        function importTable() {
+            const raw = document.getElementById('paste-area').value;
+            if(!raw) return;
+            const rows = raw.trim().split('\n').map(r => r.split('\t'));
+            if(rows.length) {
+                tableData.headers = rows[0];
+                tableData.rows = rows.slice(1);
+                // Padding
+                tableData.rows.forEach(r => {
+                    while(r.length < tableData.headers.length) r.push("");
+                });
+                renderAll();
+                document.getElementById('paste-area').value = "";
+            }
+        }
+
+        // --- NATIVE DOCX GENERATION ---
+        function generateDocx() {
+            const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ImageRun } = docx;
+
+            const val = id => document.getElementById('in_'+id).value || "";
+
+            // Helper to check for Bengali characters
+            const isBengali = (text) => {
+                // Unicode range for Bengali script
+                return /[\u0980-\u09FF]/.test(text);
+            };
+            
+            // Helper Styles
+            const bold = (text, defaultFont = "Times New Roman", defaultSize = 24) => {
+                return [new TextRun({ text: text, bold: true, font: defaultFont, size: defaultSize })];
+            };
+            const normal = (text, defaultFont = "Times New Roman", defaultSize = 24) => {
+                if (!text) return [new TextRun({ text: "", font: defaultFont, size: defaultSize })]; // Ensure an array is always returned
+                
+                const lines = text.split('\n');
+                const runs = [];
+                lines.forEach((line, index) => {
+                    runs.push(new TextRun({
+                        text: line,
+                        font: isBengali(line) ? 'Noto Sans Bengali' : defaultFont,
+                        size: defaultSize
+                    }));
+                    if (index < lines.length - 1) {
+                        runs.push(new TextRun({ text: "", break: 1 })); // Add a line break
+                    }
+                });
+                return runs;
+            };
+
+            const p = (children, align=AlignmentType.LEFT, spacingAfter = 100) => new Paragraph({ children: Array.isArray(children) ? children.flat() : [children], alignment: align, spacing: { after: spacingAfter } });
+            
+            // Helper for 2-column layout (invisible borders)
+            const twoCol = (leftText, leftVal, rightText, rightVal) => new TableRow({
+                children: [
+                    new TableCell({ children: [p([bold(leftText), ...normal(" " + leftVal)])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE } }),
+                    new TableCell({ children: [p([bold(rightText), ...normal(" " + rightVal)])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE }, verticalAlign: "top" })
+                ]
+            });
+            const noBorders = { top: {style: BorderStyle.NONE}, bottom: {style: BorderStyle.NONE}, left: {style: BorderStyle.NONE}, right: {style: BorderStyle.NONE}, insideVertical: {style: BorderStyle.NONE}, insideHorizontal: {style: BorderStyle.NONE} };
+
+            // Investigations Table Build
+            const invHeaders = new TableRow({
+                children: tableData.headers.map(h => new TableCell({ 
+                    children: [p([bold(h)], AlignmentType.CENTER, 0)], // Spacing after 0 for table cells
+                    shading: { fill: "f3f4f6" }
+                }))
+            });
+            const invRows = tableData.rows.map(row => new TableRow({
+                children: row.map(cell => new TableCell({ 
+                    children: [p([...normal(cell)], AlignmentType.CENTER, 0)] // Spacing after 0 for table cells
+                }))
+            }));
+            
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } // 0.5 inch margins
+                    },
+                    children: [
+                        new Paragraph({ // Logo
+                            alignment: AlignmentType.CENTER,
+                            children: [
+                                new ImageRun({
+                                    data: logoBase64,
+                                    transformation: {
+                                        width: 100, // Adjust size as needed
+                                        height: 100,
+                                    },
+                                }),
+                            ],
+                        }),
+                        // Header
+                        new Paragraph({ children: [new TextRun({ text: "Bangladesh Medical University", bold: true, size: 48, font: "Times New Roman" })], alignment: AlignmentType.CENTER }), // Increased from 36 to 48 (24pt)
+                        new Paragraph({ children: [new TextRun({ text: "Shahbag, Dhaka-1000", size: 28, font: "Times New Roman" })], alignment: AlignmentType.CENTER }), // Increased from 24 to 28 (14pt)
+                        new Paragraph({ children: [], border: { bottom: { color: "000000", space: 1, style: "single", size: 6 } } }), // Line
+
+                        p([], AlignmentType.LEFT, 0), // Spacer, with no spacing after
+
+                        // Patient Info Table
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: noBorders,
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ children: [p([bold("Name:"), ...normal(" " + val("name"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE } }),
+                                        new TableCell({ children: [p([bold("Age:"), ...normal(" " + val("age")), ...normal("   Reg:"), ...normal(" " + val("reg"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE }, verticalAlign: "top" })
+                                    ]
+                                }),
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ children: [p([bold("Admission date & time:"), ...normal(" " + val("admDate") + "; " + val("admTime"))])], borders: noBorders }),
+                                        new TableCell({ children: [p([])], borders: noBorders }), // Empty for alignment
+                                    ]
+                                }),
+                            ]
+                        }),
+                        
+                        // Discharge Summary Title Box
+                        p([...bold("Discharge Summary", "Times New Roman", 36)], AlignmentType.CENTER, 200).addBorder({ top: {style: BorderStyle.SINGLE}, bottom: {style: BorderStyle.SINGLE}, left: {style: BorderStyle.SINGLE}, right: {style: BorderStyle.SINGLE} }).addShading({ fill: "f3f4f6" }),
+
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: noBorders,
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ children: [p([bold("BALAM:"), ...normal(" " + val("balam"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE } }),
+                                        new TableCell({ children: [p([bold("Discharge date & time:"), ...normal(" " + val("disDate") + "; " + val("disTime"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE }, verticalAlign: "top" })
+                                    ]
+                                }),
+                                twoCol("SCANU:", val("scanu"), "", ""),
+                                twoCol("Address:", val("address"), "", ""),
+                                twoCol("Mother's Name:", val("mother"), "", ""),
+                                twoCol("Father's Name:", val("father"), "", ""),
+                                twoCol("Mobile Number:", val("mobile"), "", ""),
+                            ]
+                        }),
+                        
+                        p([bold("Admitting Consultant: "), ...normal(val("consultant"))]),
+                        p([bold("Diagnosis: "), ...normal(val("diagnosis"))]),
+
+                        // Status Box
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            rows: [
+                                new TableRow({ children: [
+                                    new TableCell({ children: [p([bold("Discharge Status: "), ...normal(val("disStatus"))])], borders: noBorders }),
+                                    new TableCell({ children: [p([bold("Discharge Type: "), ...normal(val("disType"))])], borders: noBorders })
+                                ]}),
+                                new TableRow({ children: [
+                                    new TableCell({ children: [p([bold("Wt: "), ...normal(val("disWeight")), bold("  Length: "), ...normal(val("disLength")), bold("  OFC: "), ...normal(val("disOFC"))])], columnSpan: 2, borders: { top: {style: BorderStyle.SINGLE, color: "aaaaaa"} } })
+                                ]})
+                            ],
+                            borders: { top: {style: BorderStyle.SINGLE}, bottom: {style: BorderStyle.SINGLE}, left: {style: BorderStyle.SINGLE}, right: {style: BorderStyle.SINGLE} }
+                        }),
+
+                        p([bold("Brief Clinical History:"), ...normal("\n" + val("history"))]),
+
+                        // General Info Table
+                        p([bold("General Information:")], AlignmentType.LEFT, 200),
+                        new Paragraph({ // Baby Section Title
+                            children: [
+                                new TextRun({ text: "Baby: (During discharge)", bold: true, underline: {}, font: "Times New Roman", size: 24 }),
+                            ],
+                            spacing: { after: 100 }
+                        }),
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: noBorders, // Set default to no borders
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ children: [p([bold("Color:"), ...normal(" " + val("babyColor"))])], borders: noBorders }),
+                                        new TableCell({ children: [p([bold("Reflex:"), ...normal(" " + val("babyReflex"))])], borders: noBorders }),
+                                        new TableCell({ children: [p([bold("CRT:"), ...normal(" <2 sec")])], borders: noBorders }),
+                                    ]
+                                }),
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ children: [p([bold("Pulse:"), ...normal(" " + val("pulse"))])], borders: noBorders }),
+                                        new TableCell({ children: [p([bold("Resp:"), ...normal(" " + val("resp"))])], borders: noBorders }),
+                                        new TableCell({ children: [p([])], borders: noBorders }), // Empty cell
+                                    ]
+                                }),
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ children: [p([bold("Birth Wt:"), ...normal(" " + val("birthWeight"))])], borders: noBorders }),
+                                        new TableCell({ children: [p([bold("Blood Grp:"), ...normal(" " + val("bloodGroup"))])], borders: noBorders }),
+                                        new TableCell({ children: [p([])], borders: noBorders }), // Empty cell
+                                    ]
+                                }),
+                            ]
+                        }),
+                        new Paragraph({ // Mother Section Title
+                            children: [
+                                new TextRun({ text: "Mother:", bold: true, underline: {}, font: "Times New Roman", size: 24 }),
+                            ],
+                            spacing: { before: 200, after: 100 }
+                        }),
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: noBorders, // Set default to no borders
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ children: [p([bold("Age:"), ...normal(" " + val("motherAge"))])], borders: noBorders }),
+                                        new TableCell({ children: [p([bold("Blood Grp:"), ...normal(" " + val("motherBlood"))])], borders: noBorders }),
+                                        new TableCell({ children: [p([bold("Para:"), ...normal(" " + val("motherPara"))])], borders: noBorders }),
+                                    ]
+                                }),
+                            ]
+                        }),
+
+                        p([bold("Treatment Summary:"), ...normal("\n" + val("treatment"))]),
+
+                        // Investigations
+                        p([bold("Investigations:")]),
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            rows: [invHeaders, ...invRows]
+                        }),
+
+                        p([bold("Advice:"), ...normal("\n" + val("advice"))]),
+                        p([bold("OPD follow up visit:"), ...normal("\n" + val("opd"))]),
+                        
+                        new Paragraph({ children: [bold("NICU Contact Number: "), ...normal(val("contact"))], border: { top: {style: BorderStyle.SINGLE}, bottom: {style: BorderStyle.SINGLE}, left: {style: BorderStyle.SINGLE}, right: {style: BorderStyle.SINGLE} }, spacing: {before: 200} }),
+
+                        // Signatures
+                        p([]),
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: noBorders,
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ children: [p([...normal(val("prepBy"))], AlignmentType.CENTER, 0), p([...normal("Prepared by")], AlignmentType.CENTER, 0)], borders: { top: {style: BorderStyle.SINGLE} } }),
+                                        new TableCell({ children: [p([...normal(val("checkBy"))], AlignmentType.CENTER, 0), p([...normal("Checked by")], AlignmentType.CENTER, 0)], borders: { top: {style: BorderStyle.SINGLE} } }),
+                                        new TableCell({ children: [p([], AlignmentType.CENTER, 0), p([...normal("Consultant Sign")], AlignmentType.CENTER, 0)], borders: { top: {style: BorderStyle.SINGLE} } })
+                                    ]
+                                })
+                            ]
+                        }),
+                        new Paragraph({ // Footer
+                            children: [
+                                ...normal("Generated by NICU System • Bangladesh Medical University", "Times New Roman", 16), // Smaller, gray text
+                            ],
+                            alignment: AlignmentType.CENTER,
+                            spacing: { before: 800 } // Adjust spacing as needed
+                        }),
+                    ]
+                }]
+            });
+
+            Packer.toBlob(doc).then(blob => {
+                saveAs(blob, `Discharge_${val("name").replace(/ /g,"_")}.docx`);
+            });
+        }
+
+        lucide.createIcons();
+        renderAll();
+        updatePreview();
+    </script>
+</body>
+</html>
+
