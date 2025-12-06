@@ -33,7 +33,7 @@
         table.layout-table td { vertical-align: top; padding: 2px; }
         
         /* Data Tables */
-        table.data-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; }
+        table.data-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; break-inside: avoid; page-break-inside: avoid; }
         table.data-table th, table.data-table td { border: 1px solid black; padding: 4px; text-align: center; }
         table.data-table th { background-color: #f3f4f6; font-weight: bold; }
         table.data-table td:first-child { text-align: left; font-weight: bold; }
@@ -76,63 +76,57 @@
             <!-- Patient Details -->
             <h2 class="text-lg font-bold mb-4 border-b pb-2">Patient Details</h2>
             <div class="grid grid-cols-2 gap-4 mb-6">
-                <div><label class="editor-label">Name</label><input type="text" class="editor-input" id="in_name" value="S/O Marium"></div>
-                <div><label class="editor-label">Age</label><input type="text" class="editor-input" id="in_age" value="11 days"></div>
-                <div><label class="editor-label">Reg No</label><input type="text" class="editor-input" id="in_reg" value="2886/01"></div>
-                <div><label class="editor-label">Admission Date</label><input type="text" class="editor-input" id="in_admDate" value="29/10/25"></div>
-                <div><label class="editor-label">Admission Time</label><input type="text" class="editor-input" id="in_admTime" value="3:45 pm"></div>
-                <div><label class="editor-label">Discharge Date</label><input type="text" class="editor-input" id="in_disDate" value="08/11/2025"></div>
-                <div><label class="editor-label">Discharge Time</label><input type="text" class="editor-input" id="in_disTime" value="12:00 pm"></div>
-                <div><label class="editor-label">BALAM</label><input type="text" class="editor-input" id="in_balam" value="7977"></div>
-                <div><label class="editor-label">SCANU</label><input type="text" class="editor-input" id="in_scanu" value="3472"></div>
-                <div><label class="editor-label">Mobile</label><input type="text" class="editor-input" id="in_mobile" value="01718636358"></div>
+                <div><label class="editor-label">Name</label><input type="text" class="editor-input" id="in_name" value=""></div>
+                <div><label class="editor-label">Age</label><input type="text" class="editor-input" id="in_age" value=""></div>
+                <div><label class="editor-label">Reg No</label><input type="text" class="editor-input" id="in_reg" value=""></div>
+                <div><label class="editor-label">Admission Date</label><input type="text" class="editor-input" id="in_admDate" value=""></div>
+                <div><label class="editor-label">Admission Time</label><input type="text" class="editor-input" id="in_admTime" value=""></div>
+                <div><label class="editor-label">Discharge Date</label><input type="text" class="editor-input" id="in_disDate" value=""></div>
+                <div><label class="editor-label">Discharge Time</label><input type="text" class="editor-input" id="in_disTime" value=""></div>
+                <div><label class="editor-label">BALAM</label><input type="text" class="editor-input" id="in_balam" value=""></div>
+                <div><label class="editor-label">SCANU</label><input type="text" class="editor-input" id="in_scanu" value=""></div>
+                <div><label class="editor-label">Mobile</label><input type="text" class="editor-input" id="in_mobile" value=""></div>
                 <div><label class="editor-label">Bed Doctor</label><input type="text" class="editor-input" id="in_bedDoctor" value=""></div>
-                <div class="col-span-2"><label class="editor-label">Address</label><input type="text" class="editor-input" id="in_address" value="Kamrangichor"></div>
-                <div><label class="editor-label">Mother's Name</label><input type="text" class="editor-input" id="in_mother" value="Marium"></div>
-                <div><label class="editor-label">Father's Name</label><input type="text" class="editor-input" id="in_father" value="Md. Hasan"></div>
-                <div class="col-span-2"><label class="editor-label">Consultant</label><input type="text" class="editor-input" id="in_consultant" value="Prof Dr. M. A. Mannan"></div>
+                <div class="col-span-2"><label class="editor-label">Address</label><input type="text" class="editor-input" id="in_address" value=""></div>
+                <div><label class="editor-label">Mother's Name</label><input type="text" class="editor-input" id="in_mother" value=""></div>
+                <div><label class="editor-label">Father's Name</label><input type="text" class="editor-input" id="in_father" value=""></div>
+                <div class="col-span-2"><label class="editor-label">Consultant</label><input type="text" class="editor-input" id="in_consultant" value=""></div>
             </div>
 
             <h2 class="text-lg font-bold mb-4 border-b pb-2">Clinical Info</h2>
             <div class="mb-4">
                 <label class="editor-label">Diagnosis</label>
-                <textarea id="in_diagnosis" class="editor-input h-20">Term (38 weeks) with appropriate for gestational age (2700g) with perinatal asphyxia with mild encephalopathy with hypernatremia (corrected)</textarea>
+                <textarea id="in_diagnosis" class="editor-input h-20"></textarea>
             </div>
             
             <div class="grid grid-cols-2 gap-4 mb-4">
-                 <div><label class="editor-label">Discharge Status</label><input type="text" class="editor-input" id="in_disStatus" value="Stable"></div>
-                 <div><label class="editor-label">Discharge Type</label><input type="text" class="editor-input" id="in_disType" value="Discharge on request"></div>
-                 <div><label class="editor-label">Discharge Weight</label><input type="text" class="editor-input" id="in_disWeight" value="2865 gm"></div>
-                 <div><label class="editor-label">Discharge Length</label><input type="text" class="editor-input" id="in_disLength" value="49 cm"></div>
-                 <div><label class="editor-label">Discharge OFC</label><input type="text" class="editor-input" id="in_disOFC" value="33 cm"></div>
+                 <div><label class="editor-label">Discharge Status</label><input type="text" class="editor-input" id="in_disStatus" value=""></div>
+                 <div><label class="editor-label">Discharge Type</label><input type="text" class="editor-input" id="in_disType" value=""></div>
+                 <div><label class="editor-label">Discharge Weight</label><input type="text" class="editor-input" id="in_disWeight" value=""></div>
+                 <div><label class="editor-label">Discharge Length</label><input type="text" class="editor-input" id="in_disLength" value=""></div>
+                 <div><label class="editor-label">Discharge OFC</label><input type="text" class="editor-input" id="in_disOFC" value=""></div>
             </div>
 
             <div class="mb-6">
                 <label class="editor-label">Brief Clinical History</label>
-                <textarea id="in_history" class="editor-input h-32">S/O Morium, out born, 11 days old 3rd issue of nonconsanguineous parents got admitted as a referred case of term (38+ weeks) with appropriate for gestational age (2700 g) with PNA (HIE stage II). Mother Morium, 26 years old, para 3 (NVD) +0, having blood group B positive was on irregular ANC and was immunized against tetanus. She had no history of GDM, PIH, thyroid disorder, fever with rash, UTI or any other chronic illness, taking any offending drugs. USG at 35 weeks of gestation revealed single live pregnancy of about 35+ weeks with cephalic presentation, placenta away from os, AFI 11.03 cm, EFW 2678 ±100 gm. Her pregnancy period was uneventful up to 38 weeks. Then she developed labour pain and a male baby weighing 2700 g was delivered by NVD, did not cry immediately after birth. Resuscitation and APGAR score was not documented. Baby was shifted to Azimpur maternal and child health training institute. Supplemental O2 through nasal cannula was given and cried 4 hours after birth and treated with O2, inj. Ceftazidime and Amikacin. Baby developed convulsion several times at 14 hours of age and treated with Inj. Phenobarbitone and inj. Fosphenytoin and antibiotic changed to Inj. Meropenem & Vancomycin. Convulsion was not controlled and referred to BMU, NICU for better management. Transportation time was 20 minutes with O2 2L/min. There was no event during transport. After admission baby was put on CPAP due to repeated apnea and continued for 72 hours. Then gradually weaned from CPAP to supplemental nasal oxygen. Now baby is on room air. Orogastric tube feeding was started after admission at day 5 and now baby is on full OG tube feeding. MRI with MRS of brain done. Report is pending. Now baby is convulsion free for last 7 days, stable on room air and on full feed. Mother is confident enough to take care of her child. So, we planned for discharge on request the baby.</textarea>
+                <textarea id="in_history" class="editor-input h-32"></textarea>
             </div>
 
             <h2 class="text-lg font-bold mb-4 border-b pb-2">General Info & Treatment</h2>
             <div class="grid grid-cols-2 gap-4 mb-4">
-                <div><label class="editor-label">Baby Color</label><input type="text" class="editor-input" id="in_babyColor" value="Pink on room air"></div>
-                <div><label class="editor-label">Reflex</label><input type="text" class="editor-input" id="in_babyReflex" value="good"></div>
-                <div><label class="editor-label">Pulse</label><input type="text" class="editor-input" id="in_pulse" value="152 b/m"></div>
-                <div><label class="editor-label">Resp. Rate</label><input type="text" class="editor-input" id="in_resp" value="42 b/m"></div>
-                <div><label class="editor-label">Birth Weight</label><input type="text" class="editor-input" id="in_birthWeight" value="2700 gm"></div>
-                <div><label class="editor-label">Blood Group</label><input type="text" class="editor-input" id="in_bloodGroup" value="A positive"></div>
-                <div><label class="editor-label">Mother Age</label><input type="text" class="editor-input" id="in_motherAge" value="26 years"></div>
-                <div><label class="editor-label">Mother Para</label><input type="text" class="editor-input" id="in_motherPara" value="3+0"></div>
+                <div><label class="editor-label">Baby Color</label><input type="text" class="editor-input" id="in_babyColor" value=""></div>
+                <div><label class="editor-label">Reflex</label><input type="text" class="editor-input" id="in_babyReflex" value=""></div>
+                <div><label class="editor-label">Pulse</label><input type="text" class="editor-input" id="in_pulse" value=""></div>
+                <div><label class="editor-label">Resp. Rate</label><input type="text" class="editor-input" id="in_resp" value=""></div>
+                <div><label class="editor-label">Birth Weight</label><input type="text" class="editor-input" id="in_birthWeight" value=""></div>
+                <div><label class="editor-label">Blood Group</label><input type="text" class="editor-input" id="in_bloodGroup" value=""></div>
+                <div><label class="editor-label">Mother Age</label><input type="text" class="editor-input" id="in_motherAge" value=""></div>
+                <div><label class="editor-label">Mother Para</label><input type="text" class="editor-input" id="in_motherPara" value=""></div>
             </div>
 
             <div class="mb-6">
                 <label class="editor-label">Treatment Summary</label>
-                <textarea id="in_treatment" class="editor-input h-32">CPAP care
-Inf. 10%  DBS + amino acid 
-OG tube feeding+ cup spoon feeding 
-Inj. Meropenem (30/10/25- 08/11/25)
-Inj. Vancomycin (30/10/25-08/11/25)
-Inj. Phenobarbitone (2/11/25 --)
-Inj. Fosphenytoin (2/11/25-3/11/25)</textarea>
+                <textarea id="in_treatment" class="editor-input h-32"></textarea>
             </div>
 
             <h2 class="text-lg font-bold mb-4 border-b pb-2">Investigations Table</h2>
@@ -144,7 +138,7 @@ Inj. Fosphenytoin (2/11/25-3/11/25)</textarea>
                     <button onclick="deleteRow()" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold hover:bg-yellow-200 border border-yellow-200">- Del Row</button>
                     <button onclick="deleteColumn()" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold hover:bg-yellow-200 border border-yellow-200">- Del Col</button>
                     <button onclick="clearTable()" class="bg-red-100 text-red-700 px-3 py-1 rounded text-xs font-bold hover:bg-red-200 border border-red-200">Clear Table</button>
-                    <button onclick="resetTable()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs font-bold hover:bg-gray-300 border border-gray-300">Reset Defaults</button>
+                    <button onclick="newPatient()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs font-bold hover:bg-gray-300 border border-gray-300">New Patient / Reset</button>
                 </div>
                 
                 <label class="editor-label">Paste Excel Data</label>
@@ -160,26 +154,20 @@ Inj. Fosphenytoin (2/11/25-3/11/25)</textarea>
             <h2 class="text-lg font-bold mb-4 border-b pb-2">Advice & Follow Up</h2>
             <div class="mb-4">
                 <label class="editor-label">Advice (Bengali/English)</label>
-                <textarea id="in_advice" class="editor-input h-32">Syp. Barbit (20 mg/5ml)
-১.৭ মিলি দিনে এক বার –চলবে
-৬ মাস পর্যন্ত শুধুমাত্র বুকের দুধ খাওয়াবেন  । 
-EPI শিডিউল অনুযায়ী টিকা দিবেন ।
-কান পরীক্ষা করার জন্য কেবিন ব্লকের ২ তলায় অডিওলজি ক্লিনিকে যোগাযোগ করবেন।
-৪৫ দিন বয়সে F ব্লক এর ৭ তলায় নিউরোলজি ফলো-আপ এ আসবেন।
-EEG of brain</textarea>
+                <textarea id="in_advice" class="editor-input h-32"></textarea>
             </div>
             <div class="mb-4">
                 <label class="editor-label">OPD Follow Up</label>
-                <textarea id="in_opd" class="editor-input h-16">MRI রিপোর্ট নিয়ে নবজাতক বহি বিভাগ (আউটডোর ১ রুম নং ৩১৪) ফলোআপে আসবেন।</textarea>
+                <textarea id="in_opd" class="editor-input h-16"></textarea>
             </div>
              <div class="mb-4">
                 <label class="editor-label">NICU Contact No</label>
-                <input type="text" class="editor-input" id="in_contact" value="01774124450">
+                <input type="text" class="editor-input" id="in_contact" value="">
             </div>
 
              <div class="grid grid-cols-2 gap-4 mb-20">
-                <div><label class="editor-label">Prepared By</label><input type="text" class="editor-input" id="in_prepBy" value="Dr. Afrina Nasrin"></div>
-                <div><label class="editor-label">Checked By</label><input type="text" class="editor-input" id="in_checkBy" value="Dr. Afrina Nasrin"></div>
+                <div><label class="editor-label">Prepared By</label><input type="text" class="editor-input" id="in_prepBy" value=""></div>
+                <div><label class="editor-label">Checked By</label><input type="text" class="editor-input" id="in_checkBy" value=""></div>
             </div>
         </div>
 
@@ -351,15 +339,55 @@ EEG of brain</textarea>
             'opd', 'contact', 'prepBy', 'checkBy', 'motherBlood', 'bedDoctor'
         ];
 
+        // Auto-Save Functionality
+        function saveData() {
+            const data = {};
+            fields.forEach(id => {
+                const el = document.getElementById(`in_${id}`);
+                if(el) data[id] = el.value;
+            });
+            data.table = tableData;
+            localStorage.setItem('nicu_discharge_data', JSON.stringify(data));
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('nicu_discharge_data');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    fields.forEach(id => {
+                        if (data[id] !== undefined) {
+                            const el = document.getElementById(`in_${id}`);
+                            if(el) el.value = data[id];
+                        }
+                    });
+                    if(data.table) tableData = data.table;
+                } catch(e) { console.error("Load failed", e); }
+            }
+            renderAll();
+            updatePreview();
+        }
+
         function updatePreview() {
             fields.forEach(id => {
                 const el = document.getElementById(`in_${id}`);
                 const out = document.getElementById(`out_${id}`);
                 if (el && out) out.innerText = el.value;
+
+                // Add save trigger
+                saveData();
             });
-            const bGrp = document.getElementById('in_bloodGroup');
+
+            // Special handling for Mother's Blood Group based on input or default logic
             const mBGrp = document.getElementById('out_motherBlood');
-            if(bGrp && mBGrp) mBGrp.innerText = "B POSITIVE"; // Default as per doc, or create separate input
+            if(mBGrp) {
+                const inMB = document.getElementById('in_motherBlood');
+                if (inMB && inMB.value) {
+                    mBGrp.innerText = inMB.value;
+                } else {
+                    mBGrp.innerText = "";
+                }
+            }
 
             // Update HTML logo visibility
             const htmlLogo = document.getElementById('html-logo');
@@ -377,19 +405,21 @@ EEG of brain</textarea>
         });
 
         // --- Table Logic ---
-        let tableData = {
-            headers: ["Date", "30/10", "31/10", "1/11", "2/11", "3/11", "4/11", "5/11", "6/11"],
-            rows: [
-                ["Hb (g/dl)", "18.4", "", "16.2", "", "", "", "", ""],
-                ["TC (/cmm)", "19380", "", "7000", "", "", "", "", ""],
-                ["N/L", "73%/19%", "", "71%/24%", "", "", "", "", ""],
-                ["PLT", "263000", "", "20000", "", "", "", "", ""],
-                ["CRP", "48", "", "39.89", "", "", "", "", ""],
-                ["S. Creatinine", "0.80", "0.32", "0.29", "0.24", "0.21", "0.19", "0.3", "0.3"],
-                ["Na+", "137", "131", "150", "146", "145", "147", "150", "141"],
-                ["K+", "3.9", "4.7", "4.21", "4.13", "3.66", "4.57", "5.7", "4.8"]
+        let defaultTable = {
+             headers: ["Date", "", "", "", "", "", "", "", ""],
+             rows: [
+                ["Hb (g/dl)", "", "", "", "", "", "", "", ""],
+                ["TC (/cmm)", "", "", "", "", "", "", "", ""],
+                ["N/L", "", "", "", "", "", "", "", ""],
+                ["PLT", "", "", "", "", "", "", "", ""],
+                ["CRP", "", "", "", "", "", "", "", ""],
+                ["S. Creatinine", "", "", "", "", "", "", "", ""],
+                ["Na+", "", "", "", "", "", "", "", ""],
+                ["K+", "", "", "", "", "", "", "", ""]
             ]
         };
+
+        let tableData = JSON.parse(JSON.stringify(defaultTable));
 
         let activeRow = -1;
         let activeCol = -1;
@@ -453,7 +483,7 @@ EEG of brain</textarea>
                 const inp = document.createElement('input');
                 inp.value = h;
                 inp.className = "w-full text-center bg-transparent font-bold";
-                inp.oninput = e => { tableData.headers[i] = e.target.value; renderPreviewTable(); };
+                inp.oninput = e => { tableData.headers[i] = e.target.value; renderPreviewTable(); saveData(); };
                 inp.onfocus = () => setActive(-1, i);
                 th.appendChild(inp);
                 thead.appendChild(th);
@@ -475,7 +505,7 @@ EEG of brain</textarea>
                     const inp = document.createElement('input');
                     inp.value = cell;
                     inp.className = "w-full p-1 text-center outline-none bg-transparent";
-                    inp.oninput = e => { tableData.rows[r][c] = e.target.value; renderPreviewTable(); };
+                    inp.oninput = e => { tableData.rows[r][c] = e.target.value; renderPreviewTable(); saveData(); };
                     inp.onfocus = () => setActive(r, c);
                     td.appendChild(inp);
                     tr.appendChild(td);
@@ -507,8 +537,8 @@ EEG of brain</textarea>
         }
 
         // Table controls
-        function addRow() { tableData.rows.push(new Array(tableData.headers.length).fill("")); renderAll(); }
-        function addColumn() { tableData.headers.push("New"); tableData.rows.forEach(r => r.push("")); renderAll(); }
+        function addRow() { tableData.rows.push(new Array(tableData.headers.length).fill("")); renderAll(); saveData(); }
+        function addColumn() { tableData.headers.push("New"); tableData.rows.forEach(r => r.push("")); renderAll(); saveData(); }
         function deleteRow() {
             if(activeRow >= 0 && activeRow < tableData.rows.length) {
                 tableData.rows.splice(activeRow, 1);
@@ -517,6 +547,7 @@ EEG of brain</textarea>
                 tableData.rows.pop();
             }
             renderAll();
+            saveData();
         }
         function deleteColumn() {
             if(activeCol >= 0 && activeCol < tableData.headers.length && tableData.headers.length > 1) {
@@ -528,9 +559,15 @@ EEG of brain</textarea>
                 tableData.rows.forEach(r => r.pop());
             }
             renderAll();
+            saveData();
         }
-        function clearTable() { if(confirm("Clear?")) { tableData.rows = [new Array(tableData.headers.length).fill("")]; renderAll(); } }
-        function resetTable() { if(confirm("Reset?")) location.reload(); }
+        function clearTable() { if(confirm("Clear?")) { tableData.rows = [new Array(tableData.headers.length).fill("")]; renderAll(); saveData(); } }
+        function newPatient() {
+            if(confirm("Start New Patient? This will clear all data.")) {
+                localStorage.removeItem('nicu_discharge_data');
+                location.reload();
+            }
+        }
         function importTable() {
             const raw = document.getElementById('paste-area').value;
             if(!raw) return;
@@ -543,6 +580,7 @@ EEG of brain</textarea>
                     while(r.length < tableData.headers.length) r.push("");
                 });
                 renderAll();
+                saveData();
                 document.getElementById('paste-area').value = "";
             }
         }
@@ -878,8 +916,7 @@ EEG of brain</textarea>
         }
 
         lucide.createIcons();
-        renderAll();
-        updatePreview();
+        loadData(); // Load saved data or initialize defaults
 
         // Auto-expand textareas
         document.querySelectorAll('textarea').forEach(el => {
