@@ -41,7 +41,8 @@
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; }
-            #print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; }
+            /* Explicitly setting padding to match .a4-page padding of 15mm to fix margins */
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 15mm; box-shadow: none; }
             @page { margin: 0; size: auto; }
             .no-print { display: none !important; }
         }
@@ -56,9 +57,12 @@
             <h1 class="text-xl font-bold font-sans">NICU Discharge Generator</h1>
         </div>
         <div class="flex gap-2">
-            <!-- DOWNLOAD BUTTON -->
+            <!-- DOWNLOAD BUTTONS -->
+            <button onclick="exportHtmlToWord()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition shadow-lg ring-2 ring-indigo-500 ring-offset-2 ring-offset-gray-900">
+                <i data-lucide="file-text"></i> Download .DOC (Simple)
+            </button>
             <button onclick="generateDocx()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition shadow-lg ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900">
-                <i data-lucide="download"></i> Download .DOCX (Word)
+                <i data-lucide="download"></i> Download .DOCX (Exact)
             </button>
             <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition">
                 <i data-lucide="printer"></i> Print / PDF
@@ -543,6 +547,77 @@ EEG of brain</textarea>
             }
         }
 
+        // --- SIMPLE HTML TO WORD EXPORT ---
+        function exportHtmlToWord() {
+            const preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title>";
+
+            // Inline critical CSS
+            const styles = `
+                <style>
+                body { font-family: 'Times New Roman', serif; color: black; }
+                table { border-collapse: collapse; width: 100%; }
+                td, th { vertical-align: top; padding: 2px; }
+
+                /* Replicate Layout Table */
+                table.layout-table { width: 100%; margin-bottom: 5px; }
+                table.layout-table td { border: none; vertical-align: top; padding: 2px; }
+
+                /* Replicate Data Table */
+                table.data-table { width: 100%; border: 1px solid black; font-size: 10px; margin-top: 5px; }
+                table.data-table th, table.data-table td { border: 1px solid black; padding: 4px; text-align: center; }
+                table.data-table th { background-color: #f3f4f6; font-weight: bold; }
+                table.data-table td:first-child { text-align: left; font-weight: bold; }
+
+                /* Helpers */
+                .text-center { text-align: center; }
+                .text-right { text-align: right; }
+                .font-bold { font-weight: bold; }
+                .underline { text-decoration: underline; }
+                .text-xs { font-size: 10px; }
+                .text-sm { font-size: 12px; }
+                .text-2xl { font-size: 18pt; }
+                .mb-1 { margin-bottom: 4px; }
+                .mb-2 { margin-bottom: 8px; }
+                .mb-4 { margin-bottom: 16px; }
+                .border { border: 1px solid black; }
+                .border-b { border-bottom: 1px solid black; }
+                .border-t { border-top: 1px solid black; }
+                .border-black { border-color: black; }
+                .bg-gray-100 { background-color: #f3f4f6; }
+                .uppercase { text-transform: uppercase; }
+
+                /* Ensure image sizing */
+                img { max-height: 80px; width: auto; }
+                </style>
+            `;
+
+            const postHtml = "</head><body>";
+            const footer = "</body></html>";
+
+            // Clone the print area to avoid modifying the DOM
+            const printArea = document.getElementById("print-area").cloneNode(true);
+
+            // Fix images in the clone if they are hidden/onerror
+            const imgs = printArea.querySelectorAll('img');
+            imgs.forEach(img => {
+                if (img.style.display === 'none') {
+                    // If it was hidden (e.g. onerror), remove it or ensure it doesn't break
+                    // We'll leave it as is or try to put the base64 source if we have it
+                    img.src = logoBase64;
+                    img.style.display = 'block';
+                }
+            });
+
+            const html = preHtml + styles + postHtml + printArea.innerHTML + footer;
+
+            const blob = new Blob(['\ufeff', html], {
+                type: 'application/msword'
+            });
+
+            const name = document.getElementById('in_name').value.replace(/ /g,"_") || "Discharge_Summary";
+            saveAs(blob, name + '.doc');
+        }
+
         // --- NATIVE DOCX GENERATION ---
         async function generateDocx() {
             try {
@@ -550,10 +625,15 @@ EEG of brain</textarea>
 
                 const val = id => document.getElementById('in_'+id).value || "";
 
-                // Convert Base64 Data URI to ArrayBuffer
-                // This is critical for docx to handle the image correctly
-                const imageBlob = await fetch(logoBase64).then(res => res.blob());
-                const imageBuffer = await imageBlob.arrayBuffer();
+                // Convert Base64 Data URI to ArrayBuffer (Synchronous approach)
+                const base64Data = logoBase64.split(',')[1];
+                const binaryString = window.atob(base64Data);
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const imageBuffer = bytes.buffer;
 
                 // Helper to check for Bengali characters
                 const isBengali = (text) => {
