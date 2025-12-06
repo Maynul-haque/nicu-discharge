@@ -9,7 +9,6 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- DOCX Generation Libraries (Critical for download) -->
-    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
@@ -22,18 +21,23 @@
         .editor-input { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; font-size: 0.875rem; }
         .editor-label { display: block; font-family: sans-serif; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: #4b5563; margin-bottom: 0.25rem; }
 
+        /* Resizer */
+        .resizer { width: 6px; background: #cbd5e1; cursor: col-resize; flex: 0 0 auto; transition: background 0.2s; z-index: 20; }
+        .resizer:hover, .resizer.dragging { background: #3b82f6; }
+
         /* A4 Page Layout */
         .a4-page {
             width: 210mm; min-height: 297mm; background: white; padding: 15mm;
             box-shadow: 0 0 10px rgba(0,0,0,0.1); margin: 0 auto; position: relative; color: black;
+            font-size: 12pt; line-height: 1.3;
         }
         
         /* Layout Tables for Preview */
-        table.layout-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+        table.layout-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 12pt; }
         table.layout-table td { vertical-align: top; padding: 2px; }
         
         /* Data Tables */
-        table.data-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; break-inside: avoid; page-break-inside: avoid; }
+        table.data-table { width: 100%; border-collapse: collapse; font-size: 12pt; margin-top: 5px; break-inside: avoid; page-break-inside: avoid; }
         table.data-table th, table.data-table td { border: 1px solid black; padding: 4px; text-align: center; }
         table.data-table th { background-color: #f3f4f6; font-weight: bold; }
         table.data-table td:first-child { text-align: left; font-weight: bold; }
@@ -59,10 +63,7 @@
         <div class="flex gap-2">
             <!-- DOWNLOAD BUTTONS -->
             <button onclick="exportHtmlToWord()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition shadow-lg ring-2 ring-indigo-500 ring-offset-2 ring-offset-gray-900">
-                <i data-lucide="file-text"></i> Download .DOC (Simple)
-            </button>
-            <button onclick="generateDocx()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition shadow-lg ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900">
-                <i data-lucide="download"></i> Download .DOCX (Exact)
+                <i data-lucide="file-text"></i> Download .DOC (Word)
             </button>
             <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition">
                 <i data-lucide="printer"></i> Print / PDF
@@ -70,9 +71,9 @@
         </div>
     </nav>
 
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden" id="main-container">
         <!-- Editor (Left) -->
-        <div class="w-full md:w-5/12 bg-white border-r border-gray-300 overflow-y-auto p-6 no-print font-sans">
+        <div id="editor-panel" class="bg-white overflow-y-auto p-6 no-print font-sans" style="width: 40%;">
             <!-- Patient Details -->
             <h2 class="text-lg font-bold mb-4 border-b pb-2">Patient Details</h2>
             <div class="grid grid-cols-2 gap-4 mb-6">
@@ -171,9 +172,12 @@
             </div>
         </div>
 
+        <!-- Resizer -->
+        <div id="resizer" class="resizer no-print"></div>
+
         <!-- Preview (Right) -->
-        <div class="w-full md:w-7/12 bg-gray-500 overflow-y-auto p-8 flex justify-center">
-            <div id="print-area" class="a4-page text-xs leading-tight">
+        <div id="preview-panel" class="bg-gray-500 overflow-y-auto p-8 flex justify-center flex-1">
+            <div id="print-area" class="a4-page leading-tight">
                 
                 <!-- Header -->
                 <div class="text-center mb-4">
@@ -592,16 +596,16 @@
             // Inline critical CSS
             const styles = `
                 <style>
-                body { font-family: 'Times New Roman', serif; color: black; }
+                body { font-family: 'Times New Roman', serif; color: black; font-size: 12pt; }
                 table { border-collapse: collapse; width: 100%; }
                 td, th { vertical-align: top; padding: 2px; }
 
                 /* Replicate Layout Table */
-                table.layout-table { width: 100%; margin-bottom: 5px; }
+                table.layout-table { width: 100%; margin-bottom: 5px; font-size: 12pt; }
                 table.layout-table td { border: none; vertical-align: top; padding: 2px; }
 
                 /* Replicate Data Table */
-                table.data-table { width: 100%; border: 1px solid black; font-size: 10px; margin-top: 5px; }
+                table.data-table { width: 100%; border: 1px solid black; font-size: 12pt; margin-top: 5px; }
                 table.data-table th, table.data-table td { border: 1px solid black; padding: 4px; text-align: center; }
                 table.data-table th { background-color: #f3f4f6; font-weight: bold; }
                 table.data-table td:first-child { text-align: left; font-weight: bold; }
@@ -611,8 +615,8 @@
                 .text-right { text-align: right; }
                 .font-bold { font-weight: bold; }
                 .underline { text-decoration: underline; }
-                .text-xs { font-size: 10px; }
-                .text-sm { font-size: 12px; }
+                .text-xs { font-size: 12pt; } /* Override xs to 12pt */
+                .text-sm { font-size: 12pt; }
                 .text-2xl { font-size: 18pt; }
                 .mb-1 { margin-bottom: 4px; }
                 .mb-2 { margin-bottom: 8px; }
@@ -656,265 +660,6 @@
             saveAs(blob, name + '.doc');
         }
 
-        // --- NATIVE DOCX GENERATION ---
-        async function generateDocx() {
-            try {
-                const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ImageRun } = docx;
-
-                const val = id => document.getElementById('in_'+id).value || "";
-
-                // Convert Base64 Data URI to ArrayBuffer (Synchronous approach)
-                const base64Data = logoBase64.split(',')[1];
-                const binaryString = window.atob(base64Data);
-                const len = binaryString.length;
-                const bytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                const imageBuffer = bytes.buffer;
-
-                // Helper to check for Bengali characters
-                const isBengali = (text) => {
-                    // Unicode range for Bengali script
-                    return /[\u0980-\u09FF]/.test(text);
-                };
-
-                // Helper Styles
-                const bold = (text, defaultFont = "Times New Roman", defaultSize = 24) => {
-                    return [new TextRun({ text: text, bold: true, font: defaultFont, size: defaultSize })];
-                };
-                const normal = (text, defaultFont = "Times New Roman", defaultSize = 24) => {
-                    if (!text) return [new TextRun({ text: "", font: defaultFont, size: defaultSize })]; // Ensure an array is always returned
-
-                    const lines = text.split('\n');
-                    const runs = [];
-                    lines.forEach((line, index) => {
-                        runs.push(new TextRun({
-                            text: line,
-                            font: isBengali(line) ? 'Noto Sans Bengali' : defaultFont,
-                            size: defaultSize
-                        }));
-                        if (index < lines.length - 1) {
-                            runs.push(new TextRun({ text: "", break: 1 })); // Add a line break
-                        }
-                    });
-                    return runs;
-                };
-
-                const p = (children, align=AlignmentType.LEFT, spacingAfter = 100) => new Paragraph({ children: Array.isArray(children) ? children.flat() : [children], alignment: align, spacing: { after: spacingAfter } });
-
-                // Helper for 2-column layout (invisible borders)
-                const twoCol = (leftText, leftVal, rightText, rightVal) => new TableRow({
-                    children: [
-                        new TableCell({ children: [p([bold(leftText), ...normal(" " + leftVal)])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE } }),
-                        new TableCell({ children: [p([bold(rightText), ...normal(" " + rightVal)])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE }, verticalAlign: "top" })
-                    ]
-                });
-                const noBorders = { top: {style: BorderStyle.NONE}, bottom: {style: BorderStyle.NONE}, left: {style: BorderStyle.NONE}, right: {style: BorderStyle.NONE}, insideVertical: {style: BorderStyle.NONE}, insideHorizontal: {style: BorderStyle.NONE} };
-
-                // Investigations Table Build
-                const invHeaders = new TableRow({
-                    children: tableData.headers.map(h => new TableCell({
-                        children: [p([bold(h)], AlignmentType.CENTER, 0)], // Spacing after 0 for table cells
-                        shading: { fill: "f3f4f6" }
-                    }))
-                });
-                const invRows = tableData.rows.map(row => new TableRow({
-                    children: row.map(cell => new TableCell({
-                        children: [p([...normal(cell)], AlignmentType.CENTER, 0)] // Spacing after 0 for table cells
-                    }))
-                }));
-
-                const doc = new Document({
-                    sections: [{
-                        properties: {
-                            page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } // 0.5 inch margins
-                        },
-                        children: [
-                            new Paragraph({ // Logo
-                                alignment: AlignmentType.CENTER,
-                                children: [
-                                    new ImageRun({
-                                        data: imageBuffer,
-                                        transformation: {
-                                            width: 100, // Adjust size as needed
-                                            height: 100,
-                                        },
-                                    }),
-                                ],
-                            }),
-                            // Header
-                            new Paragraph({ children: [new TextRun({ text: "Bangladesh Medical University", bold: true, size: 48, font: "Times New Roman" })], alignment: AlignmentType.CENTER }), // Increased from 36 to 48 (24pt)
-                            new Paragraph({ children: [new TextRun({ text: "Shahbag, Dhaka-1000", size: 28, font: "Times New Roman" })], alignment: AlignmentType.CENTER }), // Increased from 24 to 28 (14pt)
-                            new Paragraph({ children: [], border: { bottom: { color: "000000", space: 1, style: "single", size: 6 } } }), // Line
-
-                            p([], AlignmentType.LEFT, 0), // Spacer, with no spacing after
-
-                            // Patient Info Table
-                            new Table({
-                                width: { size: 100, type: WidthType.PERCENTAGE },
-                                borders: noBorders,
-                                rows: [
-                                    new TableRow({
-                                        children: [
-                                            new TableCell({ children: [p([bold("Name:"), ...normal(" " + val("name"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE } }),
-                                            new TableCell({ children: [p([bold("Age:"), ...normal(" " + val("age")), ...normal("   Reg:"), ...normal(" " + val("reg"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE }, verticalAlign: "top" })
-                                        ]
-                                    }),
-                                    new TableRow({
-                                        children: [
-                                            new TableCell({ children: [p([bold("Admission date & time:"), ...normal(" " + val("admDate") + "; " + val("admTime"))])], borders: noBorders }),
-                                            new TableCell({ children: [p([])], borders: noBorders }), // Empty for alignment
-                                        ]
-                                    }),
-                                ]
-                            }),
-
-                            // Discharge Summary Title Box
-                            p([...bold("Discharge Summary", "Times New Roman", 36)], AlignmentType.CENTER, 200).addBorder({ top: {style: BorderStyle.SINGLE}, bottom: {style: BorderStyle.SINGLE}, left: {style: BorderStyle.SINGLE}, right: {style: BorderStyle.SINGLE} }).addShading({ fill: "f3f4f6" }),
-
-                            new Table({
-                                width: { size: 100, type: WidthType.PERCENTAGE },
-                                borders: noBorders,
-                                rows: [
-                                    new TableRow({
-                                        children: [
-                                            new TableCell({ children: [p([bold("BALAM:"), ...normal(" " + val("balam"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE } }),
-                                            new TableCell({ children: [p([bold("Discharge date & time:"), ...normal(" " + val("disDate") + "; " + val("disTime"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE }, verticalAlign: "top" })
-                                        ]
-                                    }),
-                                    twoCol("SCANU:", val("scanu"), "", ""),
-                                    twoCol("Address:", val("address"), "", ""),
-                                    twoCol("Mother's Name:", val("mother"), "", ""),
-                                    twoCol("Father's Name:", val("father"), "", ""),
-                                    twoCol("Mobile Number:", val("mobile"), "Bed Doctor:", val("bedDoctor")),
-                                ]
-                            }),
-
-                            p([bold("Admitting Consultant: "), ...normal(val("consultant"))]),
-                            p([bold("Diagnosis: "), ...normal(val("diagnosis"))]),
-
-                            // Status Box
-                            new Table({
-                                width: { size: 100, type: WidthType.PERCENTAGE },
-                                rows: [
-                                    new TableRow({ children: [
-                                        new TableCell({ children: [p([bold("Discharge Status: "), ...normal(val("disStatus"))])], borders: noBorders }),
-                                        new TableCell({ children: [p([bold("Discharge Type: "), ...normal(val("disType"))])], borders: noBorders })
-                                    ]}),
-                                    new TableRow({ children: [
-                                        new TableCell({ children: [p([bold("Wt: "), ...normal(val("disWeight")), bold("  Length: "), ...normal(val("disLength")), bold("  OFC: "), ...normal(val("disOFC"))])], columnSpan: 2, borders: { top: {style: BorderStyle.SINGLE, color: "aaaaaa"} } })
-                                    ]})
-                                ],
-                                borders: { top: {style: BorderStyle.SINGLE}, bottom: {style: BorderStyle.SINGLE}, left: {style: BorderStyle.SINGLE}, right: {style: BorderStyle.SINGLE} }
-                            }),
-
-                            p([bold("Brief Clinical History:"), ...normal("\n" + val("history"))]),
-
-                            // General Info Table
-                            p([bold("General Information:")], AlignmentType.LEFT, 200),
-                            new Paragraph({ // Baby Section Title
-                                children: [
-                                    new TextRun({ text: "Baby: (During discharge)", bold: true, underline: {}, font: "Times New Roman", size: 24 }),
-                                ],
-                                spacing: { after: 100 }
-                            }),
-                            new Table({
-                                width: { size: 100, type: WidthType.PERCENTAGE },
-                                borders: noBorders, // Set default to no borders
-                                rows: [
-                                    new TableRow({
-                                        children: [
-                                            new TableCell({ children: [p([bold("Color:"), ...normal(" " + val("babyColor"))])], borders: noBorders }),
-                                            new TableCell({ children: [p([bold("Reflex:"), ...normal(" " + val("babyReflex"))])], borders: noBorders }),
-                                            new TableCell({ children: [p([bold("CRT:"), ...normal(" <2 sec")])], borders: noBorders }),
-                                        ]
-                                    }),
-                                    new TableRow({
-                                        children: [
-                                            new TableCell({ children: [p([bold("Pulse:"), ...normal(" " + val("pulse"))])], borders: noBorders }),
-                                            new TableCell({ children: [p([bold("Resp:"), ...normal(" " + val("resp"))])], borders: noBorders }),
-                                            new TableCell({ children: [p([])], borders: noBorders }), // Empty cell
-                                        ]
-                                    }),
-                                    new TableRow({
-                                        children: [
-                                            new TableCell({ children: [p([bold("Birth Wt:"), ...normal(" " + val("birthWeight"))])], borders: noBorders }),
-                                            new TableCell({ children: [p([bold("Blood Grp:"), ...normal(" " + val("bloodGroup"))])], borders: noBorders }),
-                                            new TableCell({ children: [p([])], borders: noBorders }), // Empty cell
-                                        ]
-                                    }),
-                                ]
-                            }),
-                            new Paragraph({ // Mother Section Title
-                                children: [
-                                    new TextRun({ text: "Mother:", bold: true, underline: {}, font: "Times New Roman", size: 24 }),
-                                ],
-                                spacing: { before: 200, after: 100 }
-                            }),
-                            new Table({
-                                width: { size: 100, type: WidthType.PERCENTAGE },
-                                borders: noBorders, // Set default to no borders
-                                rows: [
-                                    new TableRow({
-                                        children: [
-                                            new TableCell({ children: [p([bold("Age:"), ...normal(" " + val("motherAge"))])], borders: noBorders }),
-                                            new TableCell({ children: [p([bold("Blood Grp:"), ...normal(" " + val("motherBlood"))])], borders: noBorders }),
-                                            new TableCell({ children: [p([bold("Para:"), ...normal(" " + val("motherPara"))])], borders: noBorders }),
-                                        ]
-                                    }),
-                                ]
-                            }),
-
-                            p([bold("Treatment Summary:"), ...normal("\n" + val("treatment"))]),
-
-                            // Investigations
-                            p([bold("Investigations:")]),
-                            new Table({
-                                width: { size: 100, type: WidthType.PERCENTAGE },
-                                rows: [invHeaders, ...invRows]
-                            }),
-
-                            p([bold("Advice:"), ...normal("\n" + val("advice"))]),
-                            p([bold("OPD follow up visit:"), ...normal("\n" + val("opd"))]),
-
-                            new Paragraph({ children: [bold("NICU Contact Number: "), ...normal(val("contact"))], border: { top: {style: BorderStyle.SINGLE}, bottom: {style: BorderStyle.SINGLE}, left: {style: BorderStyle.SINGLE}, right: {style: BorderStyle.SINGLE} }, spacing: {before: 200} }),
-
-                            // Signatures
-                            p([]),
-                            new Table({
-                                width: { size: 100, type: WidthType.PERCENTAGE },
-                                borders: noBorders,
-                                rows: [
-                                    new TableRow({
-                                        children: [
-                                            new TableCell({ children: [p([...normal(val("prepBy"))], AlignmentType.CENTER, 0), p([...normal("Prepared by")], AlignmentType.CENTER, 0)], borders: { top: {style: BorderStyle.SINGLE} } }),
-                                            new TableCell({ children: [p([...normal(val("checkBy"))], AlignmentType.CENTER, 0), p([...normal("Checked by")], AlignmentType.CENTER, 0)], borders: { top: {style: BorderStyle.SINGLE} } }),
-                                            new TableCell({ children: [p([], AlignmentType.CENTER, 0), p([...normal("Consultant Sign")], AlignmentType.CENTER, 0)], borders: { top: {style: BorderStyle.SINGLE} } })
-                                        ]
-                                    })
-                                ]
-                            }),
-                            new Paragraph({ // Footer
-                                children: [
-                                    ...normal("Generated by NICU System • Bangladesh Medical University", "Times New Roman", 16), // Smaller, gray text
-                                ],
-                                alignment: AlignmentType.CENTER,
-                                spacing: { before: 800 } // Adjust spacing as needed
-                            }),
-                        ]
-                    }]
-                });
-
-                Packer.toBlob(doc).then(blob => {
-                    saveAs(blob, `Discharge_${val("name").replace(/ /g,"_")}.docx`);
-                });
-            } catch (error) {
-                console.error("DOCX Generation Failed:", error);
-                alert("Failed to generate DOCX. See console for details.\n" + error.message);
-            }
-        }
-
         lucide.createIcons();
         loadData(); // Load saved data or initialize defaults
 
@@ -927,6 +672,48 @@
             // Initial sizing
             el.style.height = 'auto';
             el.style.height = (el.scrollHeight) + 'px';
+        });
+
+        // --- RESIZER LOGIC ---
+        const resizer = document.getElementById('resizer');
+        const editorPanel = document.getElementById('editor-panel');
+        const previewPanel = document.getElementById('preview-panel');
+        const container = document.getElementById('main-container');
+
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizer.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault(); // Prevent selection
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            // Calculate width percentage
+            const containerRect = container.getBoundingClientRect();
+            const pointerRelativeXpos = e.clientX - containerRect.left;
+
+            // Constrain between 20% and 80%
+            const minWidth = containerRect.width * 0.2;
+            const maxWidth = containerRect.width * 0.8;
+
+            let newWidth = pointerRelativeXpos;
+            if (newWidth < minWidth) newWidth = minWidth;
+            if (newWidth > maxWidth) newWidth = maxWidth;
+
+            const percentage = (newWidth / containerRect.width) * 100;
+            editorPanel.style.width = percentage + '%';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if(isResizing) {
+                isResizing = false;
+                resizer.classList.remove('dragging');
+                document.body.style.cursor = 'default';
+            }
         });
     </script>
 </body>
