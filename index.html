@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NICU Discharge Summary Generator</title>
     <!-- Tailwind CSS -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
-    <script src="[https://unpkg.com/lucide@latest](https://unpkg.com/lucide@latest)"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- DOCX Generation Libraries (Critical for download) -->
-    <script src="[https://unpkg.com/docx@7.1.0/build/index.js](https://unpkg.com/docx@7.1.0/build/index.js)"></script>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js](https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js)"></script>
+    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
-        @import url('[https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Times+New+Roman&display=swap](https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Times+New+Roman&display=swap)');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Times+New+Roman&display=swap');
 
         body { font-family: 'Times New Roman', Times, serif; color: black; }
         .bengali-text { font-family: 'Noto Sans Bengali', sans-serif; }
@@ -331,7 +331,7 @@ EEG of brain</textarea>
 
     <!-- Logic -->
     <script>
-        const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKMAAADICAYAAACEX1EZAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAgAElEQVR42uy9d3xUde7//5w+kynpjSSkEFoEBKQEKQq4NBuKCmurtjW362l/q2tKUVxbu+s+9t4rihRK6JBOpUj0ep3398ckN5mUyQAhAb+ex4PHg8zMvfd93/d1T3md8z5vGb/J8csTkwzA+cBMYBogB5YBS4E1LFhr+22Sjl9kv01BWOADGNYEvJnABEDdya8+wPomYC4H9rBg7W9z+BsYTwqAMcAFrbRfnxM8U3mT1vQRWMmCtfW/Te5vYOwKfEpgVCvwjWmyP/bN+s+P+0BswhJkABMAm8DkZ/1f20e4x4WqXQkAAAAASUVORK5CYII=';
+        const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKMAAADICAYAAACEX1EZAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAgAElEQVR42uy9d3xUde7//5w+kynpjSSkEFoEBKQEKQq4NBuKBSurq6uuYltd2/4W3dVddUWx665lP/beKVIE6VVK6JBOeplker3398ckN5mUyQAhAb+ex4PHg8zMvfd93/d1T3md8z5vGb/J8csTkwzA+cBMYBogB5YBS4E1LFhr+22Sjl9kv01BWOADGNYEvJnABEDdya89wPomYC4H9rBg7W9z+BsYTwqAMcAFrbRfnxM8U3mT1vQRWMmCtfW/Te5vYOwKfEpgVCvwjWmyP/bN+s+P+0BswhJkABMAm8DkZ/1f20e4x4WqXQkAAAAASUVORK5CYII=';
 
         const fields = [
             'name', 'age', 'reg', 'admDate', 'admTime', 'disDate', 'disTime', 'balam', 'scanu', 'mobile',
@@ -381,8 +381,7 @@ EEG of brain</textarea>
             ]
         };
 
-        function renderAll() {
-            // Editor
+        function renderEditorTable() {
             const table = document.getElementById('editor-table');
             table.innerHTML = '';
             const thead = document.createElement('tr');
@@ -392,7 +391,7 @@ EEG of brain</textarea>
                 const inp = document.createElement('input');
                 inp.value = h;
                 inp.className = "w-full text-center bg-transparent font-bold";
-                inp.oninput = e => { tableData.headers[i] = e.target.value; renderAll(); };
+                inp.oninput = e => { tableData.headers[i] = e.target.value; renderPreviewTable(); };
                 th.appendChild(inp);
                 thead.appendChild(th);
             });
@@ -406,14 +405,15 @@ EEG of brain</textarea>
                     const inp = document.createElement('input');
                     inp.value = cell;
                     inp.className = "w-full p-1 text-center outline-none focus:bg-blue-50";
-                    inp.oninput = e => { tableData.rows[r][c] = e.target.value; renderAll(); };
+                    inp.oninput = e => { tableData.rows[r][c] = e.target.value; renderPreviewTable(); };
                     td.appendChild(inp);
                     tr.appendChild(td);
                 });
                 table.appendChild(tr);
             });
+        }
 
-            // Preview
+        function renderPreviewTable() {
             const container = document.getElementById('table-container');
             let html = '<table class="data-table"><thead><tr>';
             tableData.headers.forEach(h => html += `<th>${h}</th>`);
@@ -425,6 +425,11 @@ EEG of brain</textarea>
             });
             html += '</tbody></table>';
             container.innerHTML = html;
+        }
+
+        function renderAll() {
+            renderEditorTable();
+            renderPreviewTable();
         }
 
         // Table controls
@@ -700,4 +705,3 @@ EEG of brain</textarea>
     </script>
 </body>
 </html>
-
