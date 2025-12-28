@@ -9,8 +9,11 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- DOCX Generation Libraries (Critical for download) -->
-    <script src="https://unpkg.com/docx@8.2.0/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script type="module">
+        import * as docx from "https://cdn.jsdelivr.net/npm/docx@8.5.0/+esm";
+        window.docx = docx;
+    </script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Times+New+Roman&display=swap');
@@ -425,7 +428,11 @@
 
         fields.forEach(id => {
             const el = document.getElementById(`in_${id}`);
-            if(el) el.addEventListener('input', updatePreview);
+            if(el) {
+                el.addEventListener('input', updatePreview);
+                // Clear table active state when focusing other inputs to prevent paste hijacking
+                el.addEventListener('focus', () => { setActive(-1, -1); });
+            }
         });
 
         // --- Table Logic ---
@@ -600,7 +607,7 @@
             const isInsideTable = editorTable.contains(e.target);
 
             // Only proceed if active cell is selected OR user is pasting into the table container
-            if (!isInsideTable && (activeRow === -1 && activeCol === -1)) return;
+            if (!isInsideTable && (activeRow === -1 || activeCol === -1)) return;
 
             // Prevent default only if we successfully handle the paste
 
