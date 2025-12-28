@@ -38,6 +38,9 @@
         
         /* Data Tables */
         table.data-table { width: 100%; border-collapse: collapse; font-size: 12pt; margin-top: 5px; break-inside: avoid; page-break-inside: avoid; }
+
+        /* Print Layout Helpers */
+        .box-no-break { break-inside: avoid; page-break-inside: avoid; }
         table.data-table th, table.data-table td { border: 1px solid black; padding: 4px; text-align: center; }
         table.data-table th { background-color: #f3f4f6; font-weight: bold; }
         table.data-table td:first-child { text-align: left; font-weight: bold; }
@@ -230,7 +233,7 @@
                 </table>
 
                 <!-- Status Box -->
-                <div class="border border-black p-2 mb-4">
+                <div class="border border-black p-2 mb-4 box-no-break">
                     <table class="layout-table">
                         <tr>
                             <td><b>Discharge Status:</b> <span id="out_disStatus"></span></td>
@@ -255,7 +258,7 @@
                 </div>
 
                 <!-- General Info -->
-                <div class="border border-black mb-4">
+                <div class="border border-black mb-4 box-no-break">
                     <div class="bg-gray-100 font-bold text-center border-b border-black py-1">General Information:</div>
                     <div class="p-2">
                         <div class="font-bold underline mb-1">Baby: (During discharge)</div>
@@ -309,7 +312,7 @@
                 <div class="mb-6">
                     <p class="font-bold mb-1">OPD follow up visit:</p>
                     <p id="out_opd" class="bengali-text mb-4"></p>
-                    <div class="border border-black p-2 inline-block">
+                    <div class="border border-black p-2 inline-block box-no-break">
                         <b>NICU Contact Number:</b> <span id="out_contact"></span>
                     </div>
                 </div>
