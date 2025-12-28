@@ -9,6 +9,7 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- DOCX Generation Libraries (Critical for download) -->
+    <script src="https://unpkg.com/docx@8.2.0/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
@@ -41,8 +42,8 @@
 
         /* Print Layout Helpers */
         .box-no-break { break-inside: avoid; page-break-inside: avoid; }
-        table.data-table th, table.data-table td { border: 1px solid black; padding: 4px; text-align: center; }
-        table.data-table th { background-color: #f3f4f6; font-weight: bold; }
+        table.data-table th, table.data-table td { border: 1px solid black !important; padding: 4px; text-align: center; }
+        table.data-table th { background-color: #f3f4f6; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         table.data-table td:first-child { text-align: left; font-weight: bold; }
 
         @media print {
@@ -52,6 +53,15 @@
             #print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 15mm; box-shadow: none; }
             @page { margin: 0; size: auto; }
             .no-print { display: none !important; }
+
+            /* Force borders on specific elements for print */
+            .border { border: 1px solid black !important; }
+            .border-b { border-bottom: 1px solid black !important; }
+            .border-t { border-top: 1px solid black !important; }
+            .border-black { border-color: black !important; }
+
+            /* Ensure background colors print */
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
 </head>
@@ -65,8 +75,8 @@
         </div>
         <div class="flex gap-2">
             <!-- DOWNLOAD BUTTONS -->
-            <button onclick="exportHtmlToWord()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition shadow-lg ring-2 ring-indigo-500 ring-offset-2 ring-offset-gray-900">
-                <i data-lucide="file-text"></i> Download .DOC (Word)
+            <button onclick="generateDocx()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition shadow-lg ring-2 ring-indigo-500 ring-offset-2 ring-offset-gray-900">
+                <i data-lucide="file-text"></i> Download .DOCX (Word)
             </button>
             <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition">
                 <i data-lucide="printer"></i> Print / PDF
@@ -146,10 +156,8 @@
                     <button onclick="newPatient()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs font-bold hover:bg-gray-300 border border-gray-300">New Patient / Reset</button>
                 </div>
                 
-                <label class="editor-label">Paste Excel Data</label>
-                <div class="flex gap-2">
-                    <textarea id="paste-area" class="editor-input h-16 text-xs font-mono" placeholder="Copy table from Excel and paste here..."></textarea>
-                    <button onclick="importTable()" class="bg-emerald-600 text-white px-4 py-1 rounded text-xs font-bold hover:bg-emerald-700 whitespace-nowrap self-start h-16">Import</button>
+                <div class="text-xs text-gray-500 mt-2">
+                    Tip: Click any cell and paste (Ctrl+V) to insert data from Excel or Word.
                 </div>
             </div>
             <div class="overflow-x-auto mb-6">
@@ -584,92 +592,416 @@
                 location.reload();
             }
         }
-        function importTable() {
-            const raw = document.getElementById('paste-area').value;
-            if(!raw) return;
-            const rows = raw.trim().split('\n').map(r => r.split('\t'));
-            if(rows.length) {
-                tableData.headers = rows[0];
-                tableData.rows = rows.slice(1);
-                // Padding
-                tableData.rows.forEach(r => {
-                    while(r.length < tableData.headers.length) r.push("");
+        // Paste Logic
+        document.addEventListener('paste', function(e) {
+            // Check if paste event is relevant to the table
+            const editorTable = document.getElementById('editor-table');
+            // If target is inside the table or the table itself
+            const isInsideTable = editorTable.contains(e.target);
+
+            // Only proceed if active cell is selected OR user is pasting into the table container
+            if (!isInsideTable && (activeRow === -1 && activeCol === -1)) return;
+
+            // Prevent default only if we successfully handle the paste
+
+            const clipboardData = e.clipboardData || window.clipboardData;
+            const htmlData = clipboardData.getData('text/html');
+            const textData = clipboardData.getData('text/plain');
+
+            let rows = [];
+
+            if (htmlData && htmlData.includes('<tr')) {
+                // Parse HTML (Word/Web)
+                const doc = new DOMParser().parseFromString(htmlData, 'text/html');
+                const trs = doc.querySelectorAll('tr');
+                trs.forEach(tr => {
+                    const rowData = [];
+                    // Handle th and td
+                    tr.querySelectorAll('td, th').forEach(td => rowData.push(td.innerText.trim()));
+                    if(rowData.length) rows.push(rowData);
                 });
-                renderAll();
-                saveData();
-                document.getElementById('paste-area').value = "";
+            } else if (textData) {
+                // Parse TSV (Excel)
+                // Filter out empty lines if needed
+                const lines = textData.trim().split('\n');
+                if (lines.length > 0) {
+                     rows = lines.map(r => r.split('\t'));
+                }
             }
-        }
 
-        // --- SIMPLE HTML TO WORD EXPORT ---
-        function exportHtmlToWord() {
-            const preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title>";
+            if (rows.length === 0) return;
 
-            // Inline critical CSS
-            const styles = `
-                <style>
-                body { font-family: 'Times New Roman', serif; color: black; font-size: 12pt; }
-                table { border-collapse: collapse; width: 100%; }
-                td, th { vertical-align: top; padding: 2px; }
+            // If we are editing an input, and the paste is single-value, let default behavior happen?
+            // Actually, if it's a multi-cell paste, we override.
+            if (rows.length === 1 && rows[0].length === 1 && isInsideTable && e.target.tagName === 'INPUT') {
+                // Let default paste happen for single cell content
+                return;
+            }
 
-                /* Replicate Layout Table */
-                table.layout-table { width: 100%; margin-bottom: 5px; font-size: 12pt; }
-                table.layout-table td { border: none; vertical-align: top; padding: 2px; }
+            e.preventDefault();
 
-                /* Replicate Data Table */
-                table.data-table { width: 100%; border: 1px solid black; font-size: 12pt; margin-top: 5px; }
-                table.data-table th, table.data-table td { border: 1px solid black; padding: 4px; text-align: center; }
-                table.data-table th { background-color: #f3f4f6; font-weight: bold; }
-                table.data-table td:first-child { text-align: left; font-weight: bold; }
+            // Determine start position
+            // If no active cell, start at 0,0? Or append? User said "paste directly into table".
+            // Let's assume start at active cell, or if none, start at first data row (0,0 of body)
+            let startRow = activeRow >= 0 ? activeRow : 0;
+            let startCol = activeCol >= 0 ? activeCol : 0;
 
-                /* Helpers */
-                .text-center { text-align: center; }
-                .text-right { text-align: right; }
-                .font-bold { font-weight: bold; }
-                .underline { text-decoration: underline; }
-                .text-xs { font-size: 12pt; } /* Override xs to 12pt */
-                .text-sm { font-size: 12pt; }
-                .text-2xl { font-size: 18pt; }
-                .mb-1 { margin-bottom: 4px; }
-                .mb-2 { margin-bottom: 8px; }
-                .mb-4 { margin-bottom: 16px; }
-                .border { border: 1px solid black; }
-                .border-b { border-bottom: 1px solid black; }
-                .border-t { border-top: 1px solid black; }
-                .border-black { border-color: black; }
-                .bg-gray-100 { background-color: #f3f4f6; }
-                .uppercase { text-transform: uppercase; }
+            // If activeRow is -1 (header selected?), we might want to paste into headers?
+            // Current implementation: headers are separate in tableData.headers vs tableData.rows
+            // activeRow -1 means header? logic in renderEditorTable:
+            // inp.onfocus = () => setActive(-1, i); -> activeRow = -1 means header row.
 
-                /* Ensure image sizing */
-                img { max-height: 80px; width: auto; }
-                </style>
-            `;
+            const isHeaderStart = (startRow === -1);
 
-            const postHtml = "</head><body>";
-            const footer = "</body></html>";
+            rows.forEach((row, rIdx) => {
+                // Calculate target row index in tableData.rows
+                // If starting at header (-1), row 0 of paste goes to header, row 1 goes to data row 0
 
-            // Clone the print area to avoid modifying the DOM
-            const printArea = document.getElementById("print-area").cloneNode(true);
+                let targetRowIdx = startRow + rIdx;
 
-            // Fix images in the clone if they are hidden/onerror
-            const imgs = printArea.querySelectorAll('img');
-            imgs.forEach(img => {
-                if (img.style.display === 'none') {
-                    // If it was hidden (e.g. onerror), remove it or ensure it doesn't break
-                    // We'll leave it as is or try to put the base64 source if we have it
-                    img.src = logoBase64;
-                    img.style.display = 'block';
+                if (isHeaderStart) {
+                    if (targetRowIdx === -1) {
+                        // Pasting into header
+                        row.forEach((cellData, cIdx) => {
+                            const targetCol = startCol + cIdx;
+                            // Expand headers if needed
+                            while (targetCol >= tableData.headers.length) {
+                                tableData.headers.push("New");
+                                tableData.rows.forEach(r => r.push(""));
+                            }
+                            tableData.headers[targetCol] = cellData;
+                        });
+                        return; // Done with this row
+                    } else {
+                        // Pasting into body (shifted by header start)
+                         // targetRowIdx is correct (0, 1, 2...) for body
+                    }
+                } else {
+                    // Start in body
+                }
+
+                // Adjust for the fact that we might have processed the first row as header
+                // If isHeaderStart, the subsequent rows map to tableData.rows[rIdx - 1] basically?
+                // Wait, targetRowIdx math: startRow=-1. rIdx=0 -> -1 (Header). rIdx=1 -> 0 (Row 0). Correct.
+
+                if (targetRowIdx >= 0) {
+                     // Ensure row exists
+                     while (targetRowIdx >= tableData.rows.length) {
+                         tableData.rows.push(new Array(tableData.headers.length).fill(""));
+                     }
+
+                     row.forEach((cellData, cIdx) => {
+                         const targetCol = startCol + cIdx;
+                         // Expand cols
+                         while (targetCol >= tableData.headers.length) {
+                             tableData.headers.push("New");
+                             tableData.rows.forEach(r => r.push(""));
+                         }
+
+                         if (tableData.rows[targetRowIdx]) {
+                             tableData.rows[targetRowIdx][targetCol] = cellData;
+                         }
+                     });
                 }
             });
 
-            const html = preHtml + styles + postHtml + printArea.innerHTML + footer;
+            renderAll();
+            saveData();
+        });
 
-            const blob = new Blob(['\ufeff', html], {
-                type: 'application/msword'
+        // --- TRUE DOCX EXPORT ---
+        async function generateDocx() {
+            const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, TextRun, AlignmentType, BorderStyle, ImageRun, VerticalAlign } = docx;
+
+            // Styles
+            const font = "Times New Roman";
+            const size = 24; // 12pt
+            const boldSize = 24;
+
+            // Helper for Text
+            const text = (txt, bold = false, underline = false) => new TextRun({ text: txt || " ", font, size, bold, underline: underline ? { type: 'single' } : undefined });
+            const titleText = (txt) => new TextRun({ text: txt, font, size: 36, bold: true }); // 18pt
+
+            // Borders
+            const solidBorder = { style: BorderStyle.SINGLE, size: 1, color: "000000" };
+            const noBorder = { style: BorderStyle.NONE };
+            const allBorders = { top: solidBorder, bottom: solidBorder, left: solidBorder, right: solidBorder };
+
+            // Helper for Layout Table Row (No borders)
+            const layoutRow = (label1, val1, label2, val2) => {
+                const cells = [];
+                // Col 1
+                cells.push(new TableCell({
+                    children: [new Paragraph({ children: [text(label1, true), text(" "), text(val1)] })],
+                    width: { size: 50, type: WidthType.PERCENTAGE },
+                    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }
+                }));
+                // Col 2
+                if(label2 || val2) {
+                     cells.push(new TableCell({
+                        children: [new Paragraph({
+                            children: [text(label2, true), text(" "), text(val2)],
+                            alignment: AlignmentType.RIGHT
+                        })],
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }
+                    }));
+                } else {
+                     cells.push(new TableCell({
+                        children: [],
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }
+                    }));
+                }
+                return new TableRow({ children: cells });
+            };
+
+            // Get Values
+            const getVal = (id) => document.getElementById('in_' + id)?.value || "";
+
+            // 1. Header (Logo + Text)
+            // Since logo is base64, we need to strip prefix
+            const logoData = logoBase64.split(',')[1];
+
+            const headerTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({
+                                children: [
+                                    new Paragraph({
+                                        children: [
+                                            new ImageRun({
+                                                data: Uint8Array.from(atob(logoData), c => c.charCodeAt(0)),
+                                                transformation: { width: 80, height: 80 }
+                                            })
+                                        ]
+                                    })
+                                ],
+                                width: { size: 15, type: WidthType.PERCENTAGE },
+                                borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                                verticalAlign: VerticalAlign.CENTER
+                            }),
+                            new TableCell({
+                                children: [
+                                    new Paragraph({ children: [titleText("BANGLADESH MEDICAL UNIVERSITY")], alignment: AlignmentType.CENTER }),
+                                    new Paragraph({ children: [text("Shahbag, Dhaka-1000", true)], alignment: AlignmentType.CENTER }),
+                                ],
+                                width: { size: 85, type: WidthType.PERCENTAGE },
+                                borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                                verticalAlign: VerticalAlign.CENTER
+                            })
+                        ]
+                    })
+                ]
             });
 
-            const name = document.getElementById('in_name').value.replace(/ /g,"_") || "Discharge_Summary";
-            saveAs(blob, name + '.doc');
+            // 2. Patient Info
+            const patientInfo = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    layoutRow("Name:", getVal('name'), "Age:", getVal('age') + "   Reg: " + getVal('reg')),
+                    layoutRow("Admission date & time:", getVal('admDate') + "; " + getVal('admTime'), "", "")
+                ]
+            });
+
+            // 3. Discharge Summary Title
+            const summaryTitle = new Paragraph({
+                children: [text("Discharge Summary", true)],
+                alignment: AlignmentType.CENTER,
+                border: { top: solidBorder, bottom: solidBorder, left: solidBorder, right: solidBorder },
+                spacing: { before: 200, after: 200 },
+                shading: { fill: "F3F4F6" }
+            });
+
+            // 4. More Info
+            const moreInfo = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    layoutRow("BALAM:", getVal('balam'), "Discharge date & time:", getVal('disDate') + "; " + getVal('disTime')),
+                    layoutRow("SCANU:", getVal('scanu'), "", ""),
+                    layoutRow("Address:", getVal('address'), "", ""),
+                    layoutRow("Mother's Name:", getVal('mother'), "", ""),
+                    layoutRow("Father's Name:", getVal('father'), "", ""),
+                    layoutRow("Mobile Number:", getVal('mobile'), "Bed Doctor:", getVal('bedDoctor'))
+                ]
+            });
+
+            const consultantRow = new Paragraph({ children: [text("Admitting Consultant: ", true), text(getVal('consultant'))], spacing: { before: 200 } });
+            const diagnosisRow = new Paragraph({ children: [text("Diagnosis: ", true), text(getVal('diagnosis'))], spacing: { before: 100, after: 200 } });
+
+            // 5. Status Box
+            const statusTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: allBorders,
+                rows: [
+                    layoutRow("Discharge Status:", getVal('disStatus'), "Discharge Type:", getVal('disType')),
+                    new TableRow({ children: [ new TableCell({ children: [], borders: { top: solidBorder, bottom: noBorder, left: noBorder, right: noBorder }, columnSpan: 2 }) ] }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [text("Wt: ", true), text(getVal('disWeight'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [text("Length: ", true), text(getVal('disLength'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [text("OFC: ", true), text(getVal('disOFC'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                        ]
+                    })
+                ]
+            });
+
+            // 6. History
+            const historyTitle = new Paragraph({ children: [text("Brief Clinical History:", true, true)], spacing: { before: 200 } });
+            const historyText = new Paragraph({ children: [text(getVal('history'))] });
+
+            // 7. General Info Box
+            const generalInfoTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: allBorders,
+                rows: [
+                    new TableRow({
+                        children: [new TableCell({
+                            children: [new Paragraph({ children: [text("General Information:", true)], alignment: AlignmentType.CENTER })],
+                            shading: { fill: "F3F4F6" },
+                            borders: { bottom: solidBorder }
+                        })]
+                    }),
+                    new TableRow({
+                        children: [new TableCell({
+                            children: [
+                                new Paragraph({ children: [text("Baby: (During discharge)", true, true)] }),
+                                new Table({
+                                    width: { size: 100, type: WidthType.PERCENTAGE },
+                                    rows: [
+                                        layoutRow("Color:", getVal('babyColor'), "Reflex:", getVal('babyReflex')),
+                                        layoutRow("Pulse:", getVal('pulse'), "Resp:", getVal('resp')),
+                                        layoutRow("Birth Wt:", getVal('birthWeight'), "Blood Grp:", getVal('bloodGroup'))
+                                    ]
+                                }),
+                                new Paragraph({ children: [text("Mother:", true, true)], spacing: { before: 100 } }),
+                                new Table({
+                                    width: { size: 100, type: WidthType.PERCENTAGE },
+                                    rows: [
+                                        new TableRow({
+                                            children: [
+                                                new TableCell({ children: [new Paragraph({ children: [text("Age:", true), text(" "), text(getVal('motherAge'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                                                new TableCell({ children: [new Paragraph({ children: [text("Blood Grp:", true), text(" "), text(getVal('motherBlood'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                                                new TableCell({ children: [new Paragraph({ children: [text("Para:", true), text(" "), text(getVal('motherPara'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                                            ]
+                                        })
+                                    ]
+                                })
+                            ]
+                        })]
+                    })
+                ]
+            });
+
+            // 8. Treatment
+            const treatmentTitle = new Paragraph({ children: [text("Treatment Summary:", true, true)], spacing: { before: 200 } });
+            const treatmentText = new Paragraph({ children: [text(getVal('treatment'))] });
+
+            // 9. Investigations Table
+            const invTitle = new Paragraph({ children: [text("Investigation:", true, true)], spacing: { before: 200, after: 100 } });
+
+            // Build Inv Table Rows
+            const invRows = [];
+            // Header
+            const headerCells = tableData.headers.map(h => new TableCell({
+                children: [new Paragraph({ children: [text(h, true)], alignment: AlignmentType.CENTER })],
+                borders: allBorders,
+                shading: { fill: "F3F4F6" }
+            }));
+            invRows.push(new TableRow({ children: headerCells }));
+
+            // Data
+            tableData.rows.forEach(row => {
+                const cells = row.map((cell, idx) => new TableCell({
+                    children: [new Paragraph({ children: [text(cell, idx === 0)], alignment: idx === 0 ? AlignmentType.LEFT : AlignmentType.CENTER })],
+                    borders: allBorders
+                }));
+                invRows.push(new TableRow({ children: cells }));
+            });
+
+            const invTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: invRows
+            });
+
+            // 10. Advice
+            const adviceTitle = new Paragraph({ children: [text("Advice/Recommendation:", true, true)], spacing: { before: 200 } });
+            const adviceText = new Paragraph({ children: [text(getVal('advice'))] }); // Font might need fallback for Bengali
+
+            // 11. OPD
+            const opdTitle = new Paragraph({ children: [text("OPD follow up visit:", true)], spacing: { before: 200 } });
+            const opdText = new Paragraph({ children: [text(getVal('opd'))] });
+            const contactBox = new Paragraph({
+                children: [text("NICU Contact Number: ", true), text(getVal('contact'))],
+                border: allBorders,
+                spacing: { before: 100 }
+            });
+
+            // 12. Signatures
+            const sigTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [
+                                new Paragraph({ children: [text(getVal('prepBy'), true)], alignment: AlignmentType.CENTER }),
+                                new Paragraph({ children: [text("Prepared by")], alignment: AlignmentType.CENTER, border: { top: solidBorder } })
+                            ], width: { size: 33, type: WidthType.PERCENTAGE }, borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder } }),
+
+                             new TableCell({ children: [
+                                new Paragraph({ children: [text(getVal('checkBy'), true)], alignment: AlignmentType.CENTER }),
+                                new Paragraph({ children: [text("Checked by")], alignment: AlignmentType.CENTER, border: { top: solidBorder } })
+                            ], width: { size: 33, type: WidthType.PERCENTAGE }, borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder } }),
+
+                             new TableCell({ children: [
+                                new Paragraph({ children: [text("")], alignment: AlignmentType.CENTER }), // Spacer
+                                new Paragraph({ children: [text("Consultant Sign")], alignment: AlignmentType.CENTER, border: { top: solidBorder } })
+                            ], width: { size: 33, type: WidthType.PERCENTAGE }, borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder } }),
+                        ]
+                    })
+                ],
+                margins: { top: 700 } // Space above signatures
+            });
+
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: { margin: { top: "15mm", right: "15mm", bottom: "15mm", left: "15mm" } }
+                    },
+                    children: [
+                        headerTable,
+                        new Paragraph({ text: "" }), // Spacing
+                        patientInfo,
+                        summaryTitle,
+                        moreInfo,
+                        consultantRow,
+                        diagnosisRow,
+                        statusTable,
+                        historyTitle,
+                        historyText,
+                        new Paragraph({ text: "" }),
+                        generalInfoTable,
+                        treatmentTitle,
+                        treatmentText,
+                        invTitle,
+                        invTable,
+                        adviceTitle,
+                        adviceText,
+                        opdTitle,
+                        opdText,
+                        contactBox,
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ text: "" }),
+                        sigTable
+                    ]
+                }]
+            });
+
+            const blob = await Packer.toBlob(doc);
+            const fileName = (getVal('name').replace(/ /g,"_") || "Discharge_Summary") + ".docx";
+            saveAs(blob, fileName);
         }
 
         lucide.createIcons();
