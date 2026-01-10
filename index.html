@@ -5,15 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NICU Discharge Summary Generator</title>
     <!-- Tailwind CSS -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
-    <script src="[https://unpkg.com/lucide@latest](https://unpkg.com/lucide@latest)"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- DOCX Generation Libraries (Critical for download) -->
-    <script src="[https://unpkg.com/docx@7.1.0/build/index.js](https://unpkg.com/docx@7.1.0/build/index.js)"></script>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js](https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js)"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script type="module">
+        import * as docx from "https://cdn.jsdelivr.net/npm/docx@8.5.0/+esm";
+        window.docx = docx;
+    </script>
 
     <style>
-        @import url('[https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Times+New+Roman&display=swap](https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Times+New+Roman&display=swap)');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Times+New+Roman&display=swap');
 
         body { font-family: 'Times New Roman', Times, serif; color: black; }
         .bengali-text { font-family: 'Noto Sans Bengali', sans-serif; }
@@ -22,26 +25,46 @@
         .editor-input { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; font-size: 0.875rem; }
         .editor-label { display: block; font-family: sans-serif; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: #4b5563; margin-bottom: 0.25rem; }
 
+        /* Resizer */
+        .resizer { width: 6px; background: #cbd5e1; cursor: col-resize; flex: 0 0 auto; transition: background 0.2s; z-index: 20; }
+        .resizer:hover, .resizer.dragging { background: #3b82f6; }
+
         /* A4 Page Layout */
         .a4-page {
             width: 210mm; min-height: 297mm; background: white; padding: 15mm;
             box-shadow: 0 0 10px rgba(0,0,0,0.1); margin: 0 auto; position: relative; color: black;
+            font-size: 12pt; line-height: 1.3;
         }
         
         /* Layout Tables for Preview */
-        table.layout-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+        table.layout-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 12pt; }
         table.layout-table td { vertical-align: top; padding: 2px; }
         
         /* Data Tables */
-        table.data-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; }
-        table.data-table th, table.data-table td { border: 1px solid black; padding: 4px; text-align: center; }
-        table.data-table th { background-color: #f3f4f6; font-weight: bold; }
+        table.data-table { width: 100%; border-collapse: collapse; font-size: 12pt; margin-top: 5px; break-inside: avoid; page-break-inside: avoid; }
+
+        /* Print Layout Helpers */
+        .box-no-break { break-inside: avoid; page-break-inside: avoid; }
+        table.data-table th, table.data-table td { border: 1px solid black !important; padding: 4px; text-align: center; }
+        table.data-table th { background-color: #f3f4f6; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         table.data-table td:first-child { text-align: left; font-weight: bold; }
 
         @media print {
-            body { background: white; }
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            /* Explicitly setting padding to match .a4-page padding of 15mm to fix margins */
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 15mm; box-shadow: none; }
+            @page { margin: 0; size: auto; }
             .no-print { display: none !important; }
-            .a4-page { box-shadow: none; margin: 0; padding: 10mm; width: 100%; }
+
+            /* Force borders on specific elements for print */
+            .border { border: 1px solid black !important; }
+            .border-b { border-bottom: 1px solid black !important; }
+            .border-t { border-top: 1px solid black !important; }
+            .border-black { border-color: black !important; }
+
+            /* Ensure background colors print */
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
 </head>
@@ -54,9 +77,9 @@
             <h1 class="text-xl font-bold font-sans">NICU Discharge Generator</h1>
         </div>
         <div class="flex gap-2">
-            <!-- DOWNLOAD BUTTON -->
-            <button onclick="generateDocx()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition shadow-lg ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900">
-                <i data-lucide="download"></i> Download .DOCX (Word)
+            <!-- DOWNLOAD BUTTONS -->
+            <button onclick="generateDocx()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition shadow-lg ring-2 ring-indigo-500 ring-offset-2 ring-offset-gray-900">
+                <i data-lucide="file-text"></i> Download .DOCX (Word)
             </button>
             <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2 font-sans text-sm font-semibold transition">
                 <i data-lucide="printer"></i> Print / PDF
@@ -64,68 +87,64 @@
         </div>
     </nav>
 
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden" id="main-container">
         <!-- Editor (Left) -->
-        <div class="w-full md:w-5/12 bg-white border-r border-gray-300 overflow-y-auto p-6 no-print font-sans">
+        <div id="editor-panel" class="bg-white overflow-y-auto p-6 no-print font-sans" style="width: 40%;">
             <!-- Patient Details -->
             <h2 class="text-lg font-bold mb-4 border-b pb-2">Patient Details</h2>
             <div class="grid grid-cols-2 gap-4 mb-6">
-                <div><label class="editor-label">Name</label><input type="text" class="editor-input" id="in_name" value="S/O Marium"></div>
-                <div><label class="editor-label">Age</label><input type="text" class="editor-input" id="in_age" value="11 days"></div>
-                <div><label class="editor-label">Reg No</label><input type="text" class="editor-input" id="in_reg" value="2886/01"></div>
-                <div><label class="editor-label">Admission Date</label><input type="text" class="editor-input" id="in_admDate" value="29/10/25"></div>
-                <div><label class="editor-label">Admission Time</label><input type="text" class="editor-input" id="in_admTime" value="3:45 pm"></div>
-                <div><label class="editor-label">Discharge Date</label><input type="text" class="editor-input" id="in_disDate" value="08/11/2025"></div>
-                <div><label class="editor-label">Discharge Time</label><input type="text" class="editor-input" id="in_disTime" value="12:00 pm"></div>
-                <div><label class="editor-label">BALAM</label><input type="text" class="editor-input" id="in_balam" value="7977"></div>
-                <div><label class="editor-label">SCANU</label><input type="text" class="editor-input" id="in_scanu" value="3472"></div>
-                <div><label class="editor-label">Mobile</label><input type="text" class="editor-input" id="in_mobile" value="01718636358"></div>
-                <div class="col-span-2"><label class="editor-label">Address</label><input type="text" class="editor-input" id="in_address" value="Kamrangichor"></div>
-                <div><label class="editor-label">Mother's Name</label><input type="text" class="editor-input" id="in_mother" value="Marium"></div>
-                <div><label class="editor-label">Father's Name</label><input type="text" class="editor-input" id="in_father" value="Md. Hasan"></div>
-                <div class="col-span-2"><label class="editor-label">Consultant</label><input type="text" class="editor-input" id="in_consultant" value="Prof Dr. M. A. Mannan"></div>
+                <div><label class="editor-label">Name</label><input type="text" class="editor-input" id="in_name" value=""></div>
+                <div><label class="editor-label">Age</label><input type="text" class="editor-input" id="in_age" value=""></div>
+                <div><label class="editor-label">Reg No</label><input type="text" class="editor-input" id="in_reg" value=""></div>
+                <div><label class="editor-label">Admission Date</label><input type="text" class="editor-input" id="in_admDate" value=""></div>
+                <div><label class="editor-label">Admission Time</label><input type="text" class="editor-input" id="in_admTime" value=""></div>
+                <div><label class="editor-label">Discharge Date</label><input type="text" class="editor-input" id="in_disDate" value=""></div>
+                <div><label class="editor-label">Discharge Time</label><input type="text" class="editor-input" id="in_disTime" value=""></div>
+                <div><label class="editor-label">BALAM</label><input type="text" class="editor-input" id="in_balam" value=""></div>
+                <div><label class="editor-label">SCANU</label><input type="text" class="editor-input" id="in_scanu" value=""></div>
+                <div><label class="editor-label">Mobile</label><input type="text" class="editor-input" id="in_mobile" value=""></div>
+                <div><label class="editor-label">Bed Doctor</label><input type="text" class="editor-input" id="in_bedDoctor" value=""></div>
+                <div class="col-span-2"><label class="editor-label">Address</label><input type="text" class="editor-input" id="in_address" value=""></div>
+                <div><label class="editor-label">Mother's Name</label><input type="text" class="editor-input" id="in_mother" value=""></div>
+                <div><label class="editor-label">Father's Name</label><input type="text" class="editor-input" id="in_father" value=""></div>
+                <div class="col-span-2"><label class="editor-label">Consultant</label><input type="text" class="editor-input" id="in_consultant" value=""></div>
             </div>
 
             <h2 class="text-lg font-bold mb-4 border-b pb-2">Clinical Info</h2>
             <div class="mb-4">
                 <label class="editor-label">Diagnosis</label>
-                <textarea id="in_diagnosis" class="editor-input h-20">Term (38 weeks) with appropriate for gestational age (2700g) with perinatal asphyxia with mild encephalopathy with hypernatremia (corrected)</textarea>
+                <textarea id="in_diagnosis" class="editor-input h-20"></textarea>
             </div>
             
             <div class="grid grid-cols-2 gap-4 mb-4">
-                 <div><label class="editor-label">Discharge Status</label><input type="text" class="editor-input" id="in_disStatus" value="Stable"></div>
-                 <div><label class="editor-label">Discharge Type</label><input type="text" class="editor-input" id="in_disType" value="Discharge on request"></div>
-                 <div><label class="editor-label">Discharge Weight</label><input type="text" class="editor-input" id="in_disWeight" value="2865 gm"></div>
-                 <div><label class="editor-label">Discharge Length</label><input type="text" class="editor-input" id="in_disLength" value="49 cm"></div>
-                 <div><label class="editor-label">Discharge OFC</label><input type="text" class="editor-input" id="in_disOFC" value="33 cm"></div>
+                 <div><label class="editor-label">Discharge Status</label><input type="text" class="editor-input" id="in_disStatus" value=""></div>
+                 <div><label class="editor-label">Discharge Type</label><input type="text" class="editor-input" id="in_disType" value=""></div>
+                 <div><label class="editor-label">Discharge Weight</label><input type="text" class="editor-input" id="in_disWeight" value=""></div>
+                 <div><label class="editor-label">Discharge Length</label><input type="text" class="editor-input" id="in_disLength" value=""></div>
+                 <div><label class="editor-label">Discharge OFC</label><input type="text" class="editor-input" id="in_disOFC" value=""></div>
             </div>
 
             <div class="mb-6">
                 <label class="editor-label">Brief Clinical History</label>
-                <textarea id="in_history" class="editor-input h-32">S/O Morium, out born, 11 days old 3rd issue of nonconsanguineous parents got admitted as a referred case of term (38+ weeks) with appropriate for gestational age (2700 g) with PNA (HIE stage II). Mother Morium, 26 years old, para 3 (NVD) +0, having blood group B positive was on irregular ANC and was immunized against tetanus. She had no history of GDM, PIH, thyroid disorder, fever with rash, UTI or any other chronic illness, taking any offending drugs. USG at 35 weeks of gestation revealed single live pregnancy of about 35+ weeks with cephalic presentation, placenta away from os, AFI 11.03 cm, EFW 2678 ±100 gm. Her pregnancy period was uneventful up to 38 weeks. Then she developed labour pain and a male baby weighing 2700 g was delivered by NVD, did not cry immediately after birth. Resuscitation and APGAR score was not documented. Baby was shifted to Azimpur maternal and child health training institute. Supplemental O2 through nasal cannula was given and cried 4 hours after birth and treated with O2, inj. Ceftazidime and Amikacin. Baby developed convulsion several times at 14 hours of age and treated with Inj. Phenobarbitone and inj. Fosphenytoin and antibiotic changed to Inj. Meropenem & Vancomycin. Convulsion was not controlled and referred to BMU, NICU for better management. Transportation time was 20 minutes with O2 2L/min. There was no event during transport. After admission baby was put on CPAP due to repeated apnea and continued for 72 hours. Then gradually weaned from CPAP to supplemental nasal oxygen. Now baby is on room air. Orogastric tube feeding was started after admission at day 5 and now baby is on full OG tube feeding. MRI with MRS of brain done. Report is pending. Now baby is convulsion free for last 7 days, stable on room air and on full feed. Mother is confident enough to take care of her child. So, we planned for discharge on request the baby.</textarea>
+                <textarea id="in_history" class="editor-input h-32"></textarea>
             </div>
 
             <h2 class="text-lg font-bold mb-4 border-b pb-2">General Info & Treatment</h2>
             <div class="grid grid-cols-2 gap-4 mb-4">
-                <div><label class="editor-label">Baby Color</label><input type="text" class="editor-input" id="in_babyColor" value="Pink on room air"></div>
-                <div><label class="editor-label">Reflex</label><input type="text" class="editor-input" id="in_babyReflex" value="good"></div>
-                <div><label class="editor-label">Pulse</label><input type="text" class="editor-input" id="in_pulse" value="152 b/m"></div>
-                <div><label class="editor-label">Resp. Rate</label><input type="text" class="editor-input" id="in_resp" value="42 b/m"></div>
-                <div><label class="editor-label">Birth Weight</label><input type="text" class="editor-input" id="in_birthWeight" value="2700 gm"></div>
-                <div><label class="editor-label">Blood Group</label><input type="text" class="editor-input" id="in_bloodGroup" value="A positive"></div>
-                <div><label class="editor-label">Mother Age</label><input type="text" class="editor-input" id="in_motherAge" value="26 years"></div>
-                <div><label class="editor-label">Mother Para</label><input type="text" class="editor-input" id="in_motherPara" value="3+0"></div>
+                <div><label class="editor-label">Baby Color</label><input type="text" class="editor-input" id="in_babyColor" value=""></div>
+                <div><label class="editor-label">Reflex</label><input type="text" class="editor-input" id="in_babyReflex" value=""></div>
+                <div><label class="editor-label">Pulse</label><input type="text" class="editor-input" id="in_pulse" value=""></div>
+                <div><label class="editor-label">Resp. Rate</label><input type="text" class="editor-input" id="in_resp" value=""></div>
+                <div><label class="editor-label">Birth Weight</label><input type="text" class="editor-input" id="in_birthWeight" value=""></div>
+                <div><label class="editor-label">Blood Group</label><input type="text" class="editor-input" id="in_bloodGroup" value=""></div>
+                <div><label class="editor-label">Mother Age</label><input type="text" class="editor-input" id="in_motherAge" value=""></div>
+                <div><label class="editor-label">Mother Blood Group</label><input type="text" class="editor-input" id="in_motherBlood" value=""></div>
+                <div><label class="editor-label">Mother Para</label><input type="text" class="editor-input" id="in_motherPara" value=""></div>
             </div>
 
             <div class="mb-6">
                 <label class="editor-label">Treatment Summary</label>
-                <textarea id="in_treatment" class="editor-input h-32">CPAP care
-Inf. 10%  DBS + amino acid 
-OG tube feeding+ cup spoon feeding 
-Inj. Meropenem (30/10/25- 08/11/25)
-Inj. Vancomycin (30/10/25-08/11/25)
-Inj. Phenobarbitone (2/11/25 --)
-Inj. Fosphenytoin (2/11/25-3/11/25)</textarea>
+                <textarea id="in_treatment" class="editor-input h-32"></textarea>
             </div>
 
             <h2 class="text-lg font-bold mb-4 border-b pb-2">Investigations Table</h2>
@@ -137,13 +156,11 @@ Inj. Fosphenytoin (2/11/25-3/11/25)</textarea>
                     <button onclick="deleteRow()" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold hover:bg-yellow-200 border border-yellow-200">- Del Row</button>
                     <button onclick="deleteColumn()" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-xs font-bold hover:bg-yellow-200 border border-yellow-200">- Del Col</button>
                     <button onclick="clearTable()" class="bg-red-100 text-red-700 px-3 py-1 rounded text-xs font-bold hover:bg-red-200 border border-red-200">Clear Table</button>
-                    <button onclick="resetTable()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs font-bold hover:bg-gray-300 border border-gray-300">Reset Defaults</button>
+                    <button onclick="newPatient()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs font-bold hover:bg-gray-300 border border-gray-300">New Patient / Reset</button>
                 </div>
                 
-                <label class="editor-label">Paste Excel Data</label>
-                <div class="flex gap-2">
-                    <textarea id="paste-area" class="editor-input h-16 text-xs font-mono" placeholder="Copy table from Excel and paste here..."></textarea>
-                    <button onclick="importTable()" class="bg-emerald-600 text-white px-4 py-1 rounded text-xs font-bold hover:bg-emerald-700 whitespace-nowrap self-start h-16">Import</button>
+                <div class="text-xs text-gray-500 mt-2">
+                    Tip: Click any cell and paste (Ctrl+V) to insert data from Excel or Word.
                 </div>
             </div>
             <div class="overflow-x-auto mb-6">
@@ -153,38 +170,43 @@ Inj. Fosphenytoin (2/11/25-3/11/25)</textarea>
             <h2 class="text-lg font-bold mb-4 border-b pb-2">Advice & Follow Up</h2>
             <div class="mb-4">
                 <label class="editor-label">Advice (Bengali/English)</label>
-                <textarea id="in_advice" class="editor-input h-32">Syp. Barbit (20 mg/5ml)
-১.৭ মিলি দিনে এক বার –চলবে
-৬ মাস পর্যন্ত শুধুমাত্র বুকের দুধ খাওয়াবেন  । 
-EPI শিডিউল অনুযায়ী টিকা দিবেন ।
-কান পরীক্ষা করার জন্য কেবিন ব্লকের ২ তলায় অডিওলজি ক্লিনিকে যোগাযোগ করবেন।
-৪৫ দিন বয়সে F ব্লক এর ৭ তলায় নিউরোলজি ফলো-আপ এ আসবেন।
-EEG of brain</textarea>
+                <textarea id="in_advice" class="editor-input h-32"></textarea>
             </div>
             <div class="mb-4">
                 <label class="editor-label">OPD Follow Up</label>
-                <textarea id="in_opd" class="editor-input h-16">MRI রিপোর্ট নিয়ে নবজাতক বহি বিভাগ (আউটডোর ১ রুম নং ৩১৪) ফলোআপে আসবেন।</textarea>
+                <textarea id="in_opd" class="editor-input h-16"></textarea>
             </div>
              <div class="mb-4">
                 <label class="editor-label">NICU Contact No</label>
-                <input type="text" class="editor-input" id="in_contact" value="01774124450">
+                <input type="text" class="editor-input" id="in_contact" value="">
             </div>
 
              <div class="grid grid-cols-2 gap-4 mb-20">
-                <div><label class="editor-label">Prepared By</label><input type="text" class="editor-input" id="in_prepBy" value="Dr. Afrina Nasrin"></div>
-                <div><label class="editor-label">Checked By</label><input type="text" class="editor-input" id="in_checkBy" value="Dr. Afrina Nasrin"></div>
+                <div><label class="editor-label">Prepared By</label><input type="text" class="editor-input" id="in_prepBy" value=""></div>
+                <div><label class="editor-label">Checked By</label><input type="text" class="editor-input" id="in_checkBy" value=""></div>
             </div>
         </div>
 
+        <!-- Resizer -->
+        <div id="resizer" class="resizer no-print"></div>
+
         <!-- Preview (Right) -->
-        <div class="w-full md:w-7/12 bg-gray-500 overflow-y-auto p-8 flex justify-center">
-            <div id="print-area" class="a4-page text-xs leading-tight">
+        <div id="preview-panel" class="bg-gray-500 overflow-y-auto p-8 flex justify-center flex-1">
+            <div id="print-area" class="a4-page leading-tight">
                 
                 <!-- Header -->
                 <div class="text-center mb-4">
-                    <!-- <img src="logo.png" onerror="this.style.display='none'" class="h-16 w-auto mx-auto mb-2" alt="Logo"> -->
-                    <h1 class="text-2xl font-bold uppercase tracking-wide mb-1">Bangladesh Medical University</h1>
-                    <p class="text-sm font-semibold">Shahbag, Dhaka-1000</p>
+                    <table style="margin: 0 auto; width: auto;">
+                        <tr>
+                            <td style="vertical-align: middle; padding-right: 15px;">
+                                <img src="logo.png" onerror="this.style.display='none'" class="h-16 w-auto" alt="Logo">
+                            </td>
+                            <td style="vertical-align: middle; text-align: center;">
+                                <h1 class="text-2xl font-bold uppercase tracking-wide mb-1">Bangladesh Medical University</h1>
+                                <p class="text-sm font-semibold">Shahbag, Dhaka-1000</p>
+                            </td>
+                        </tr>
+                    </table>
                     <div class="border-b-2 border-black mt-2 mb-1"></div>
                     <div class="border-b border-black"></div>
                 </div>
@@ -212,14 +234,17 @@ EEG of brain</textarea>
                     <tr><td><b>Address:</b> <span id="out_address"></span></td><td></td></tr>
                     <tr><td><b>Mother's Name:</b> <span id="out_mother"></span></td><td></td></tr>
                     <tr><td><b>Father's Name:</b> <span id="out_father"></span></td><td></td></tr>
-                    <tr><td><b>Mobile Number:</b> <span id="out_mobile"></span></td><td></td></tr>
+                    <tr>
+                        <td class="w-1/2"><b>Mobile Number:</b> <span id="out_mobile"></span></td>
+                        <td class="w-1/2 text-right"><b>Bed Doctor:</b> <span id="out_bedDoctor"></span></td>
+                    </tr>
                     <tr><td colspan="2"><div class="h-2"></div></td></tr>
                     <tr><td colspan="2"><b>Admitting Consultant:</b> <span id="out_consultant"></span></td></tr>
                     <tr><td colspan="2"><b>Diagnosis:</b> <span id="out_diagnosis"></span></td></tr>
                 </table>
 
                 <!-- Status Box -->
-                <div class="border border-black p-2 mb-4">
+                <div class="border border-black p-2 mb-4 box-no-break">
                     <table class="layout-table">
                         <tr>
                             <td><b>Discharge Status:</b> <span id="out_disStatus"></span></td>
@@ -244,7 +269,7 @@ EEG of brain</textarea>
                 </div>
 
                 <!-- General Info -->
-                <div class="border border-black mb-4">
+                <div class="border border-black mb-4 box-no-break">
                     <div class="bg-gray-100 font-bold text-center border-b border-black py-1">General Information:</div>
                     <div class="p-2">
                         <div class="font-bold underline mb-1">Baby: (During discharge)</div>
@@ -298,7 +323,7 @@ EEG of brain</textarea>
                 <div class="mb-6">
                     <p class="font-bold mb-1">OPD follow up visit:</p>
                     <p id="out_opd" class="bengali-text mb-4"></p>
-                    <div class="border border-black p-2 inline-block">
+                    <div class="border border-black p-2 inline-block box-no-break">
                         <b>NICU Contact Number:</b> <span id="out_contact"></span>
                     </div>
                 </div>
@@ -331,25 +356,65 @@ EEG of brain</textarea>
 
     <!-- Logic -->
     <script>
-        const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKMAAADICAYAAACEX1EZAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAgAElEQVR42uy9d3xUde7//5w+kynpjSSkEFoEBKQEKQq4NBuKCmurtjW362l/q2tKUVxbu+s+9t4rihRK6JBOpUj0ep3398ckN5mUyQAhAb+ex4PHg8zMvfd93/d1T3md8z5vGb/J8csTkwzA+cBMYBogB5YBS4E1LFhr+22Sjl9kv01BWOADGNYEvJnABEDdya8+wPomYC4H9rBg7W9z+BsYTwqAMcAFrbRfnxM8U3mT1vQRWMmCtfW/Te5vYOwKfEpgVCvwjWmyP/bN+s+P+0BswhJkABMAm8DkZ/1f20e4x4WqXQkAAAAASUVORK5CYII=';
+        const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKMAAADICAYAAACEX1EZAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAgAElEQVR42uy9d3xUdfb//5w+kynpjSSkEFoEBKQEKQq4NBuKBSurq6uuYltd2/4W3dVddUWx665lP/beKVIE6VVK6JBOeplker3398ckN5mUyQAhAb+ex4PHg8zMvfd93/d1T3md8z5vGb/J8csTkwzA+cBMYBogB5YBS4E1LFhr+22Sjl9kv01BWOADGNYEvJnABEDdya89wPomYC4H9rBg7W9z+BsYTwqAMcAFrbRfnxM8U3mT1vwRWMmCtfW/Te5vYOwKfEpgVCvwjWmyP/bN+s+P+0BswhJkABMAm8DkZ/1f20e4x4WqXQkAAAAASUVORK5CYII=';
 
         const fields = [
             'name', 'age', 'reg', 'admDate', 'admTime', 'disDate', 'disTime', 'balam', 'scanu', 'mobile',
             'address', 'mother', 'father', 'consultant', 'diagnosis', 'disStatus', 'disType', 
             'disWeight', 'disLength', 'disOFC', 'history', 'babyColor', 'babyReflex', 'pulse', 
             'resp', 'birthWeight', 'bloodGroup', 'motherAge', 'motherPara', 'treatment', 'advice', 
-            'opd', 'contact', 'prepBy', 'checkBy', 'motherBlood'
+            'opd', 'contact', 'prepBy', 'checkBy', 'motherBlood', 'bedDoctor'
         ];
+
+        // Auto-Save Functionality
+        function saveData() {
+            const data = {};
+            fields.forEach(id => {
+                const el = document.getElementById(`in_${id}`);
+                if(el) data[id] = el.value;
+            });
+            data.table = tableData;
+            localStorage.setItem('nicu_discharge_data', JSON.stringify(data));
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('nicu_discharge_data');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    fields.forEach(id => {
+                        if (data[id] !== undefined) {
+                            const el = document.getElementById(`in_${id}`);
+                            if(el) el.value = data[id];
+                        }
+                    });
+                    if(data.table) tableData = data.table;
+                } catch(e) { console.error("Load failed", e); }
+            }
+            renderAll();
+            updatePreview();
+        }
 
         function updatePreview() {
             fields.forEach(id => {
                 const el = document.getElementById(`in_${id}`);
                 const out = document.getElementById(`out_${id}`);
                 if (el && out) out.innerText = el.value;
+
+                // Add save trigger
+                saveData();
             });
-            const bGrp = document.getElementById('in_bloodGroup');
+
+            // Special handling for Mother's Blood Group based on input or default logic
             const mBGrp = document.getElementById('out_motherBlood');
-            if(bGrp && mBGrp) mBGrp.innerText = "B POSITIVE"; // Default as per doc, or create separate input
+            if(mBGrp) {
+                const inMB = document.getElementById('in_motherBlood');
+                if (inMB && inMB.value) {
+                    mBGrp.innerText = inMB.value;
+                } else {
+                    mBGrp.innerText = "";
+                }
+            }
 
             // Update HTML logo visibility
             const htmlLogo = document.getElementById('html-logo');
@@ -363,36 +428,94 @@ EEG of brain</textarea>
 
         fields.forEach(id => {
             const el = document.getElementById(`in_${id}`);
-            if(el) el.addEventListener('input', updatePreview);
+            if(el) {
+                el.addEventListener('input', updatePreview);
+                // Clear table active state when focusing other inputs to prevent paste hijacking
+                el.addEventListener('focus', () => { setActive(-1, -1); });
+            }
         });
 
         // --- Table Logic ---
-        let tableData = {
-            headers: ["Date", "30/10", "31/10", "1/11", "2/11", "3/11", "4/11", "5/11", "6/11"],
-            rows: [
-                ["Hb (g/dl)", "18.4", "", "16.2", "", "", "", "", ""],
-                ["TC (/cmm)", "19380", "", "7000", "", "", "", "", ""],
-                ["N/L", "73%/19%", "", "71%/24%", "", "", "", "", ""],
-                ["PLT", "263000", "", "20000", "", "", "", "", ""],
-                ["CRP", "48", "", "39.89", "", "", "", "", ""],
-                ["S. Creatinine", "0.80", "0.32", "0.29", "0.24", "0.21", "0.19", "0.3", "0.3"],
-                ["Na+", "137", "131", "150", "146", "145", "147", "150", "141"],
-                ["K+", "3.9", "4.7", "4.21", "4.13", "3.66", "4.57", "5.7", "4.8"]
+        let defaultTable = {
+             headers: ["Date", "", "", "", "", "", "", "", ""],
+             rows: [
+                ["Hb (g/dl)", "", "", "", "", "", "", "", ""],
+                ["TC (/cmm)", "", "", "", "", "", "", "", ""],
+                ["N/L", "", "", "", "", "", "", "", ""],
+                ["PLT", "", "", "", "", "", "", "", ""],
+                ["CRP", "", "", "", "", "", "", "", ""],
+                ["S. Creatinine", "", "", "", "", "", "", "", ""],
+                ["Na+", "", "", "", "", "", "", "", ""],
+                ["K+", "", "", "", "", "", "", "", ""]
             ]
         };
 
-        function renderAll() {
-            // Editor
+        let tableData = JSON.parse(JSON.stringify(defaultTable));
+
+        let activeRow = -1;
+        let activeCol = -1;
+
+        function setActive(r, c) {
+            activeRow = r;
+            activeCol = c;
+
+            // Update classes directly without re-rendering to preserve focus
+            const table = document.getElementById('editor-table');
+            if(!table) return;
+
+            // Remove old highlights
+            table.querySelectorAll('.bg-blue-200').forEach(el => el.classList.remove('bg-blue-200'));
+            table.querySelectorAll('.bg-blue-50').forEach(el => el.classList.remove('bg-blue-50'));
+
+            // Apply new highlights
+            const rows = table.rows;
+            // Highlight Column Header
+            if (activeCol >= 0 && rows.length > 0) {
+                 // The header row is rows[0]. Cells: 0=Corner, 1=Col1, ...
+                 // So data col index i corresponds to cell index i+1
+                 if (rows[0].cells[activeCol+1]) {
+                     rows[0].cells[activeCol+1].classList.add('bg-blue-200');
+                 }
+            }
+
+            // Iterate rows to highlight cells and row headers
+            for (let i = 1; i < rows.length; i++) { // Skip header row
+                const rowIdx = i - 1;
+                const tr = rows[i];
+
+                // Highlight Row Header (first cell)
+                if (rowIdx === activeRow) {
+                    if (tr.cells[0]) tr.cells[0].classList.add('bg-blue-200');
+                }
+
+                // Highlight Cells in Row or Col
+                for (let j = 1; j < tr.cells.length; j++) {
+                    const colIdx = j - 1;
+                    if (rowIdx === activeRow || colIdx === activeCol) {
+                        tr.cells[j].classList.add('bg-blue-50');
+                    }
+                }
+            }
+        }
+
+        function renderEditorTable() {
             const table = document.getElementById('editor-table');
             table.innerHTML = '';
             const thead = document.createElement('tr');
+
+            // Corner cell
+            const thCorner = document.createElement('th');
+            thCorner.className = "bg-gray-100 p-1 border";
+            thead.appendChild(thCorner);
+
             tableData.headers.forEach((h, i) => {
                 const th = document.createElement('th');
                 th.className = "bg-gray-100 p-1 border";
                 const inp = document.createElement('input');
                 inp.value = h;
                 inp.className = "w-full text-center bg-transparent font-bold";
-                inp.oninput = e => { tableData.headers[i] = e.target.value; renderAll(); };
+                inp.oninput = e => { tableData.headers[i] = e.target.value; renderPreviewTable(); saveData(); };
+                inp.onfocus = () => setActive(-1, i);
                 th.appendChild(inp);
                 thead.appendChild(th);
             });
@@ -400,20 +523,32 @@ EEG of brain</textarea>
 
             tableData.rows.forEach((row, r) => {
                 const tr = document.createElement('tr');
+
+                // Row Header (index)
+                const thRow = document.createElement('td');
+                thRow.className = "bg-gray-50 border text-center text-gray-400";
+                thRow.innerText = r + 1;
+                tr.appendChild(thRow);
+
                 row.forEach((cell, c) => {
                     const td = document.createElement('td');
                     td.className = "p-0 border";
                     const inp = document.createElement('input');
                     inp.value = cell;
-                    inp.className = "w-full p-1 text-center outline-none focus:bg-blue-50";
-                    inp.oninput = e => { tableData.rows[r][c] = e.target.value; renderAll(); };
+                    inp.className = "w-full p-1 text-center outline-none bg-transparent";
+                    inp.oninput = e => { tableData.rows[r][c] = e.target.value; renderPreviewTable(); saveData(); };
+                    inp.onfocus = () => setActive(r, c);
                     td.appendChild(inp);
                     tr.appendChild(td);
                 });
                 table.appendChild(tr);
             });
 
-            // Preview
+            // Restore highlight if active
+            setActive(activeRow, activeCol);
+        }
+
+        function renderPreviewTable() {
             const container = document.getElementById('table-container');
             let html = '<table class="data-table"><thead><tr>';
             tableData.headers.forEach(h => html += `<th>${h}</th>`);
@@ -427,277 +562,510 @@ EEG of brain</textarea>
             container.innerHTML = html;
         }
 
-        // Table controls
-        function addRow() { tableData.rows.push(new Array(tableData.headers.length).fill("")); renderAll(); }
-        function addColumn() { tableData.headers.push("New"); tableData.rows.forEach(r => r.push("")); renderAll(); }
-        function deleteRow() { if(tableData.rows.length) tableData.rows.pop(); renderAll(); }
-        function deleteColumn() { if(tableData.headers.length > 1) { tableData.headers.pop(); tableData.rows.forEach(r => r.pop()); renderAll(); } }
-        function clearTable() { if(confirm("Clear?")) { tableData.rows = [new Array(tableData.headers.length).fill("")]; renderAll(); } }
-        function resetTable() { if(confirm("Reset?")) location.reload(); }
-        function importTable() {
-            const raw = document.getElementById('paste-area').value;
-            if(!raw) return;
-            const rows = raw.trim().split('\n').map(r => r.split('\t'));
-            if(rows.length) {
-                tableData.headers = rows[0];
-                tableData.rows = rows.slice(1);
-                // Padding
-                tableData.rows.forEach(r => {
-                    while(r.length < tableData.headers.length) r.push("");
-                });
-                renderAll();
-                document.getElementById('paste-area').value = "";
-            }
+        function renderAll() {
+            renderEditorTable();
+            renderPreviewTable();
         }
 
-        // --- NATIVE DOCX GENERATION ---
-        function generateDocx() {
-            const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ImageRun } = docx;
+        // Table controls
+        function addRow() { tableData.rows.push(new Array(tableData.headers.length).fill("")); renderAll(); saveData(); }
+        function addColumn() { tableData.headers.push("New"); tableData.rows.forEach(r => r.push("")); renderAll(); saveData(); }
+        function deleteRow() {
+            if(activeRow >= 0 && activeRow < tableData.rows.length) {
+                tableData.rows.splice(activeRow, 1);
+                activeRow = -1;
+            } else if(tableData.rows.length) {
+                tableData.rows.pop();
+            }
+            renderAll();
+            saveData();
+        }
+        function deleteColumn() {
+            if(activeCol >= 0 && activeCol < tableData.headers.length && tableData.headers.length > 1) {
+                tableData.headers.splice(activeCol, 1);
+                tableData.rows.forEach(r => r.splice(activeCol, 1));
+                activeCol = -1;
+            } else if(tableData.headers.length > 1) {
+                tableData.headers.pop();
+                tableData.rows.forEach(r => r.pop());
+            }
+            renderAll();
+            saveData();
+        }
+        function clearTable() { if(confirm("Clear?")) { tableData.rows = [new Array(tableData.headers.length).fill("")]; renderAll(); saveData(); } }
+        function newPatient() {
+            if(confirm("Start New Patient? This will clear all data.")) {
+                localStorage.removeItem('nicu_discharge_data');
+                location.reload();
+            }
+        }
+        // Paste Logic
+        document.addEventListener('paste', function(e) {
+            // Check if paste event is relevant to the table
+            const editorTable = document.getElementById('editor-table');
+            // If target is inside the table or the table itself
+            const isInsideTable = editorTable.contains(e.target);
 
-            const val = id => document.getElementById('in_'+id).value || "";
+            // Only proceed if active cell is selected OR user is pasting into the table container
+            if (!isInsideTable && (activeRow === -1 || activeCol === -1)) return;
 
-            // Helper to check for Bengali characters
-            const isBengali = (text) => {
-                // Unicode range for Bengali script
-                return /[\u0980-\u09FF]/.test(text);
-            };
-            
-            // Helper Styles
-            const bold = (text, defaultFont = "Times New Roman", defaultSize = 24) => {
-                return [new TextRun({ text: text, bold: true, font: defaultFont, size: defaultSize })];
-            };
-            const normal = (text, defaultFont = "Times New Roman", defaultSize = 24) => {
-                if (!text) return [new TextRun({ text: "", font: defaultFont, size: defaultSize })]; // Ensure an array is always returned
-                
-                const lines = text.split('\n');
-                const runs = [];
-                lines.forEach((line, index) => {
-                    runs.push(new TextRun({
-                        text: line,
-                        font: isBengali(line) ? 'Noto Sans Bengali' : defaultFont,
-                        size: defaultSize
-                    }));
-                    if (index < lines.length - 1) {
-                        runs.push(new TextRun({ text: "", break: 1 })); // Add a line break
-                    }
+            // Prevent default only if we successfully handle the paste
+
+            const clipboardData = e.clipboardData || window.clipboardData;
+            const htmlData = clipboardData.getData('text/html');
+            const textData = clipboardData.getData('text/plain');
+
+            let rows = [];
+
+            if (htmlData && htmlData.includes('<tr')) {
+                // Parse HTML (Word/Web)
+                const doc = new DOMParser().parseFromString(htmlData, 'text/html');
+                const trs = doc.querySelectorAll('tr');
+                trs.forEach(tr => {
+                    const rowData = [];
+                    // Handle th and td
+                    tr.querySelectorAll('td, th').forEach(td => rowData.push(td.innerText.trim()));
+                    if(rowData.length) rows.push(rowData);
                 });
-                return runs;
+            } else if (textData) {
+                // Parse TSV (Excel)
+                // Filter out empty lines if needed
+                const lines = textData.trim().split('\n');
+                if (lines.length > 0) {
+                     rows = lines.map(r => r.split('\t'));
+                }
+            }
+
+            if (rows.length === 0) return;
+
+            // If we are editing an input, and the paste is single-value, let default behavior happen?
+            // Actually, if it's a multi-cell paste, we override.
+            if (rows.length === 1 && rows[0].length === 1 && isInsideTable && e.target.tagName === 'INPUT') {
+                // Let default paste happen for single cell content
+                return;
+            }
+
+            e.preventDefault();
+
+            // Determine start position
+            // If no active cell, start at 0,0? Or append? User said "paste directly into table".
+            // Let's assume start at active cell, or if none, start at first data row (0,0 of body)
+            let startRow = activeRow >= 0 ? activeRow : 0;
+            let startCol = activeCol >= 0 ? activeCol : 0;
+
+            // If activeRow is -1 (header selected?), we might want to paste into headers?
+            // Current implementation: headers are separate in tableData.headers vs tableData.rows
+            // activeRow -1 means header? logic in renderEditorTable:
+            // inp.onfocus = () => setActive(-1, i); -> activeRow = -1 means header row.
+
+            const isHeaderStart = (startRow === -1);
+
+            rows.forEach((row, rIdx) => {
+                // Calculate target row index in tableData.rows
+                // If starting at header (-1), row 0 of paste goes to header, row 1 goes to data row 0
+
+                let targetRowIdx = startRow + rIdx;
+
+                if (isHeaderStart) {
+                    if (targetRowIdx === -1) {
+                        // Pasting into header
+                        row.forEach((cellData, cIdx) => {
+                            const targetCol = startCol + cIdx;
+                            // Expand headers if needed
+                            while (targetCol >= tableData.headers.length) {
+                                tableData.headers.push("New");
+                                tableData.rows.forEach(r => r.push(""));
+                            }
+                            tableData.headers[targetCol] = cellData;
+                        });
+                        return; // Done with this row
+                    } else {
+                        // Pasting into body (shifted by header start)
+                         // targetRowIdx is correct (0, 1, 2...) for body
+                    }
+                } else {
+                    // Start in body
+                }
+
+                // Adjust for the fact that we might have processed the first row as header
+                // If isHeaderStart, the subsequent rows map to tableData.rows[rIdx - 1] basically?
+                // Wait, targetRowIdx math: startRow=-1. rIdx=0 -> -1 (Header). rIdx=1 -> 0 (Row 0). Correct.
+
+                if (targetRowIdx >= 0) {
+                     // Ensure row exists
+                     while (targetRowIdx >= tableData.rows.length) {
+                         tableData.rows.push(new Array(tableData.headers.length).fill(""));
+                     }
+
+                     row.forEach((cellData, cIdx) => {
+                         const targetCol = startCol + cIdx;
+                         // Expand cols
+                         while (targetCol >= tableData.headers.length) {
+                             tableData.headers.push("New");
+                             tableData.rows.forEach(r => r.push(""));
+                         }
+
+                         if (tableData.rows[targetRowIdx]) {
+                             tableData.rows[targetRowIdx][targetCol] = cellData;
+                         }
+                     });
+                }
+            });
+
+            renderAll();
+            saveData();
+        });
+
+        // --- TRUE DOCX EXPORT ---
+        async function generateDocx() {
+            const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, TextRun, AlignmentType, BorderStyle, ImageRun, VerticalAlign } = docx;
+
+            // Styles
+            const font = "Times New Roman";
+            const size = 24; // 12pt
+            const boldSize = 24;
+
+            // Helper for Text
+            const text = (txt, bold = false, underline = false) => new TextRun({ text: txt || " ", font, size, bold, underline: underline ? { type: 'single' } : undefined });
+            const titleText = (txt) => new TextRun({ text: txt, font, size: 36, bold: true }); // 18pt
+
+            // Borders
+            const solidBorder = { style: BorderStyle.SINGLE, size: 1, color: "000000" };
+            const noBorder = { style: BorderStyle.NONE };
+            const allBorders = { top: solidBorder, bottom: solidBorder, left: solidBorder, right: solidBorder };
+
+            // Helper for Layout Table Row (No borders)
+            const layoutRow = (label1, val1, label2, val2) => {
+                const cells = [];
+                // Col 1
+                cells.push(new TableCell({
+                    children: [new Paragraph({ children: [text(label1, true), text(" "), text(val1)] })],
+                    width: { size: 50, type: WidthType.PERCENTAGE },
+                    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }
+                }));
+                // Col 2
+                if(label2 || val2) {
+                     cells.push(new TableCell({
+                        children: [new Paragraph({
+                            children: [text(label2, true), text(" "), text(val2)],
+                            alignment: AlignmentType.RIGHT
+                        })],
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }
+                    }));
+                } else {
+                     cells.push(new TableCell({
+                        children: [],
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }
+                    }));
+                }
+                return new TableRow({ children: cells });
             };
 
-            const p = (children, align=AlignmentType.LEFT, spacingAfter = 100) => new Paragraph({ children: Array.isArray(children) ? children.flat() : [children], alignment: align, spacing: { after: spacingAfter } });
-            
-            // Helper for 2-column layout (invisible borders)
-            const twoCol = (leftText, leftVal, rightText, rightVal) => new TableRow({
-                children: [
-                    new TableCell({ children: [p([bold(leftText), ...normal(" " + leftVal)])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE } }),
-                    new TableCell({ children: [p([bold(rightText), ...normal(" " + rightVal)])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE }, verticalAlign: "top" })
+            // Get Values
+            const getVal = (id) => document.getElementById('in_' + id)?.value || "";
+
+            // 1. Header (Logo + Text)
+            // Since logo is base64, we need to strip prefix
+            const logoData = logoBase64.split(',')[1];
+
+            const headerTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({
+                                children: [
+                                    new Paragraph({
+                                        children: [
+                                            new ImageRun({
+                                                data: Uint8Array.from(atob(logoData), c => c.charCodeAt(0)),
+                                                transformation: { width: 80, height: 80 }
+                                            })
+                                        ]
+                                    })
+                                ],
+                                width: { size: 15, type: WidthType.PERCENTAGE },
+                                borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                                verticalAlign: VerticalAlign.CENTER
+                            }),
+                            new TableCell({
+                                children: [
+                                    new Paragraph({ children: [titleText("BANGLADESH MEDICAL UNIVERSITY")], alignment: AlignmentType.CENTER }),
+                                    new Paragraph({ children: [text("Shahbag, Dhaka-1000", true)], alignment: AlignmentType.CENTER }),
+                                ],
+                                width: { size: 85, type: WidthType.PERCENTAGE },
+                                borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                                verticalAlign: VerticalAlign.CENTER
+                            })
+                        ]
+                    })
                 ]
             });
-            const noBorders = { top: {style: BorderStyle.NONE}, bottom: {style: BorderStyle.NONE}, left: {style: BorderStyle.NONE}, right: {style: BorderStyle.NONE}, insideVertical: {style: BorderStyle.NONE}, insideHorizontal: {style: BorderStyle.NONE} };
 
-            // Investigations Table Build
-            const invHeaders = new TableRow({
-                children: tableData.headers.map(h => new TableCell({ 
-                    children: [p([bold(h)], AlignmentType.CENTER, 0)], // Spacing after 0 for table cells
-                    shading: { fill: "f3f4f6" }
-                }))
+            // 2. Patient Info
+            const patientInfo = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    layoutRow("Name:", getVal('name'), "Age:", getVal('age') + "   Reg: " + getVal('reg')),
+                    layoutRow("Admission date & time:", getVal('admDate') + "; " + getVal('admTime'), "", "")
+                ]
             });
-            const invRows = tableData.rows.map(row => new TableRow({
-                children: row.map(cell => new TableCell({ 
-                    children: [p([...normal(cell)], AlignmentType.CENTER, 0)] // Spacing after 0 for table cells
-                }))
-            }));
-            
-            const doc = new Document({
-                sections: [{
-                    properties: {
-                        page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } // 0.5 inch margins
-                    },
-                    children: [
-                        new Paragraph({ // Logo
-                            alignment: AlignmentType.CENTER,
+
+            // 3. Discharge Summary Title
+            const summaryTitle = new Paragraph({
+                children: [text("Discharge Summary", true)],
+                alignment: AlignmentType.CENTER,
+                border: { top: solidBorder, bottom: solidBorder, left: solidBorder, right: solidBorder },
+                spacing: { before: 200, after: 200 },
+                shading: { fill: "F3F4F6" }
+            });
+
+            // 4. More Info
+            const moreInfo = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    layoutRow("BALAM:", getVal('balam'), "Discharge date & time:", getVal('disDate') + "; " + getVal('disTime')),
+                    layoutRow("SCANU:", getVal('scanu'), "", ""),
+                    layoutRow("Address:", getVal('address'), "", ""),
+                    layoutRow("Mother's Name:", getVal('mother'), "", ""),
+                    layoutRow("Father's Name:", getVal('father'), "", ""),
+                    layoutRow("Mobile Number:", getVal('mobile'), "Bed Doctor:", getVal('bedDoctor'))
+                ]
+            });
+
+            const consultantRow = new Paragraph({ children: [text("Admitting Consultant: ", true), text(getVal('consultant'))], spacing: { before: 200 } });
+            const diagnosisRow = new Paragraph({ children: [text("Diagnosis: ", true), text(getVal('diagnosis'))], spacing: { before: 100, after: 200 } });
+
+            // 5. Status Box
+            const statusTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: allBorders,
+                rows: [
+                    layoutRow("Discharge Status:", getVal('disStatus'), "Discharge Type:", getVal('disType')),
+                    new TableRow({ children: [ new TableCell({ children: [], borders: { top: solidBorder, bottom: noBorder, left: noBorder, right: noBorder }, columnSpan: 2 }) ] }),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [new Paragraph({ children: [text("Wt: ", true), text(getVal('disWeight'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [text("Length: ", true), text(getVal('disLength'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                            new TableCell({ children: [new Paragraph({ children: [text("OFC: ", true), text(getVal('disOFC'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                        ]
+                    })
+                ]
+            });
+
+            // 6. History
+            const historyTitle = new Paragraph({ children: [text("Brief Clinical History:", true, true)], spacing: { before: 200 } });
+            const historyText = new Paragraph({ children: [text(getVal('history'))] });
+
+            // 7. General Info Box
+            const generalInfoTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: allBorders,
+                rows: [
+                    new TableRow({
+                        children: [new TableCell({
+                            children: [new Paragraph({ children: [text("General Information:", true)], alignment: AlignmentType.CENTER })],
+                            shading: { fill: "F3F4F6" },
+                            borders: { bottom: solidBorder }
+                        })]
+                    }),
+                    new TableRow({
+                        children: [new TableCell({
                             children: [
-                                new ImageRun({
-                                    data: logoBase64,
-                                    transformation: {
-                                        width: 100, // Adjust size as needed
-                                        height: 100,
-                                    },
-                                }),
-                            ],
-                        }),
-                        // Header
-                        new Paragraph({ children: [new TextRun({ text: "Bangladesh Medical University", bold: true, size: 48, font: "Times New Roman" })], alignment: AlignmentType.CENTER }), // Increased from 36 to 48 (24pt)
-                        new Paragraph({ children: [new TextRun({ text: "Shahbag, Dhaka-1000", size: 28, font: "Times New Roman" })], alignment: AlignmentType.CENTER }), // Increased from 24 to 28 (14pt)
-                        new Paragraph({ children: [], border: { bottom: { color: "000000", space: 1, style: "single", size: 6 } } }), // Line
-
-                        p([], AlignmentType.LEFT, 0), // Spacer, with no spacing after
-
-                        // Patient Info Table
-                        new Table({
-                            width: { size: 100, type: WidthType.PERCENTAGE },
-                            borders: noBorders,
-                            rows: [
-                                new TableRow({
-                                    children: [
-                                        new TableCell({ children: [p([bold("Name:"), ...normal(" " + val("name"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE } }),
-                                        new TableCell({ children: [p([bold("Age:"), ...normal(" " + val("age")), ...normal("   Reg:"), ...normal(" " + val("reg"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE }, verticalAlign: "top" })
+                                new Paragraph({ children: [text("Baby: (During discharge)", true, true)] }),
+                                new Table({
+                                    width: { size: 100, type: WidthType.PERCENTAGE },
+                                    rows: [
+                                        layoutRow("Color:", getVal('babyColor'), "Reflex:", getVal('babyReflex')),
+                                        layoutRow("Pulse:", getVal('pulse'), "Resp:", getVal('resp')),
+                                        layoutRow("Birth Wt:", getVal('birthWeight'), "Blood Grp:", getVal('bloodGroup'))
                                     ]
                                 }),
-                                new TableRow({
-                                    children: [
-                                        new TableCell({ children: [p([bold("Admission date & time:"), ...normal(" " + val("admDate") + "; " + val("admTime"))])], borders: noBorders }),
-                                        new TableCell({ children: [p([])], borders: noBorders }), // Empty for alignment
-                                    ]
-                                }),
-                            ]
-                        }),
-                        
-                        // Discharge Summary Title Box
-                        p([...bold("Discharge Summary", "Times New Roman", 36)], AlignmentType.CENTER, 200).addBorder({ top: {style: BorderStyle.SINGLE}, bottom: {style: BorderStyle.SINGLE}, left: {style: BorderStyle.SINGLE}, right: {style: BorderStyle.SINGLE} }).addShading({ fill: "f3f4f6" }),
-
-                        new Table({
-                            width: { size: 100, type: WidthType.PERCENTAGE },
-                            borders: noBorders,
-                            rows: [
-                                new TableRow({
-                                    children: [
-                                        new TableCell({ children: [p([bold("BALAM:"), ...normal(" " + val("balam"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE } }),
-                                        new TableCell({ children: [p([bold("Discharge date & time:"), ...normal(" " + val("disDate") + "; " + val("disTime"))])], borders: noBorders, width: { size: 50, type: WidthType.PERCENTAGE }, verticalAlign: "top" })
-                                    ]
-                                }),
-                                twoCol("SCANU:", val("scanu"), "", ""),
-                                twoCol("Address:", val("address"), "", ""),
-                                twoCol("Mother's Name:", val("mother"), "", ""),
-                                twoCol("Father's Name:", val("father"), "", ""),
-                                twoCol("Mobile Number:", val("mobile"), "", ""),
-                            ]
-                        }),
-                        
-                        p([bold("Admitting Consultant: "), ...normal(val("consultant"))]),
-                        p([bold("Diagnosis: "), ...normal(val("diagnosis"))]),
-
-                        // Status Box
-                        new Table({
-                            width: { size: 100, type: WidthType.PERCENTAGE },
-                            rows: [
-                                new TableRow({ children: [
-                                    new TableCell({ children: [p([bold("Discharge Status: "), ...normal(val("disStatus"))])], borders: noBorders }),
-                                    new TableCell({ children: [p([bold("Discharge Type: "), ...normal(val("disType"))])], borders: noBorders })
-                                ]}),
-                                new TableRow({ children: [
-                                    new TableCell({ children: [p([bold("Wt: "), ...normal(val("disWeight")), bold("  Length: "), ...normal(val("disLength")), bold("  OFC: "), ...normal(val("disOFC"))])], columnSpan: 2, borders: { top: {style: BorderStyle.SINGLE, color: "aaaaaa"} } })
-                                ]})
-                            ],
-                            borders: { top: {style: BorderStyle.SINGLE}, bottom: {style: BorderStyle.SINGLE}, left: {style: BorderStyle.SINGLE}, right: {style: BorderStyle.SINGLE} }
-                        }),
-
-                        p([bold("Brief Clinical History:"), ...normal("\n" + val("history"))]),
-
-                        // General Info Table
-                        p([bold("General Information:")], AlignmentType.LEFT, 200),
-                        new Paragraph({ // Baby Section Title
-                            children: [
-                                new TextRun({ text: "Baby: (During discharge)", bold: true, underline: {}, font: "Times New Roman", size: 24 }),
-                            ],
-                            spacing: { after: 100 }
-                        }),
-                        new Table({
-                            width: { size: 100, type: WidthType.PERCENTAGE },
-                            borders: noBorders, // Set default to no borders
-                            rows: [
-                                new TableRow({
-                                    children: [
-                                        new TableCell({ children: [p([bold("Color:"), ...normal(" " + val("babyColor"))])], borders: noBorders }),
-                                        new TableCell({ children: [p([bold("Reflex:"), ...normal(" " + val("babyReflex"))])], borders: noBorders }),
-                                        new TableCell({ children: [p([bold("CRT:"), ...normal(" <2 sec")])], borders: noBorders }),
-                                    ]
-                                }),
-                                new TableRow({
-                                    children: [
-                                        new TableCell({ children: [p([bold("Pulse:"), ...normal(" " + val("pulse"))])], borders: noBorders }),
-                                        new TableCell({ children: [p([bold("Resp:"), ...normal(" " + val("resp"))])], borders: noBorders }),
-                                        new TableCell({ children: [p([])], borders: noBorders }), // Empty cell
-                                    ]
-                                }),
-                                new TableRow({
-                                    children: [
-                                        new TableCell({ children: [p([bold("Birth Wt:"), ...normal(" " + val("birthWeight"))])], borders: noBorders }),
-                                        new TableCell({ children: [p([bold("Blood Grp:"), ...normal(" " + val("bloodGroup"))])], borders: noBorders }),
-                                        new TableCell({ children: [p([])], borders: noBorders }), // Empty cell
-                                    ]
-                                }),
-                            ]
-                        }),
-                        new Paragraph({ // Mother Section Title
-                            children: [
-                                new TextRun({ text: "Mother:", bold: true, underline: {}, font: "Times New Roman", size: 24 }),
-                            ],
-                            spacing: { before: 200, after: 100 }
-                        }),
-                        new Table({
-                            width: { size: 100, type: WidthType.PERCENTAGE },
-                            borders: noBorders, // Set default to no borders
-                            rows: [
-                                new TableRow({
-                                    children: [
-                                        new TableCell({ children: [p([bold("Age:"), ...normal(" " + val("motherAge"))])], borders: noBorders }),
-                                        new TableCell({ children: [p([bold("Blood Grp:"), ...normal(" " + val("motherBlood"))])], borders: noBorders }),
-                                        new TableCell({ children: [p([bold("Para:"), ...normal(" " + val("motherPara"))])], borders: noBorders }),
-                                    ]
-                                }),
-                            ]
-                        }),
-
-                        p([bold("Treatment Summary:"), ...normal("\n" + val("treatment"))]),
-
-                        // Investigations
-                        p([bold("Investigations:")]),
-                        new Table({
-                            width: { size: 100, type: WidthType.PERCENTAGE },
-                            rows: [invHeaders, ...invRows]
-                        }),
-
-                        p([bold("Advice:"), ...normal("\n" + val("advice"))]),
-                        p([bold("OPD follow up visit:"), ...normal("\n" + val("opd"))]),
-                        
-                        new Paragraph({ children: [bold("NICU Contact Number: "), ...normal(val("contact"))], border: { top: {style: BorderStyle.SINGLE}, bottom: {style: BorderStyle.SINGLE}, left: {style: BorderStyle.SINGLE}, right: {style: BorderStyle.SINGLE} }, spacing: {before: 200} }),
-
-                        // Signatures
-                        p([]),
-                        new Table({
-                            width: { size: 100, type: WidthType.PERCENTAGE },
-                            borders: noBorders,
-                            rows: [
-                                new TableRow({
-                                    children: [
-                                        new TableCell({ children: [p([...normal(val("prepBy"))], AlignmentType.CENTER, 0), p([...normal("Prepared by")], AlignmentType.CENTER, 0)], borders: { top: {style: BorderStyle.SINGLE} } }),
-                                        new TableCell({ children: [p([...normal(val("checkBy"))], AlignmentType.CENTER, 0), p([...normal("Checked by")], AlignmentType.CENTER, 0)], borders: { top: {style: BorderStyle.SINGLE} } }),
-                                        new TableCell({ children: [p([], AlignmentType.CENTER, 0), p([...normal("Consultant Sign")], AlignmentType.CENTER, 0)], borders: { top: {style: BorderStyle.SINGLE} } })
+                                new Paragraph({ children: [text("Mother:", true, true)], spacing: { before: 100 } }),
+                                new Table({
+                                    width: { size: 100, type: WidthType.PERCENTAGE },
+                                    rows: [
+                                        new TableRow({
+                                            children: [
+                                                new TableCell({ children: [new Paragraph({ children: [text("Age:", true), text(" "), text(getVal('motherAge'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                                                new TableCell({ children: [new Paragraph({ children: [text("Blood Grp:", true), text(" "), text(getVal('motherBlood'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                                                new TableCell({ children: [new Paragraph({ children: [text("Para:", true), text(" "), text(getVal('motherPara'))] })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 33, type: WidthType.PERCENTAGE } }),
+                                            ]
+                                        })
                                     ]
                                 })
                             ]
-                        }),
-                        new Paragraph({ // Footer
-                            children: [
-                                ...normal("Generated by NICU System • Bangladesh Medical University", "Times New Roman", 16), // Smaller, gray text
-                            ],
-                            alignment: AlignmentType.CENTER,
-                            spacing: { before: 800 } // Adjust spacing as needed
-                        }),
+                        })]
+                    })
+                ]
+            });
+
+            // 8. Treatment
+            const treatmentTitle = new Paragraph({ children: [text("Treatment Summary:", true, true)], spacing: { before: 200 } });
+            const treatmentText = new Paragraph({ children: [text(getVal('treatment'))] });
+
+            // 9. Investigations Table
+            const invTitle = new Paragraph({ children: [text("Investigation:", true, true)], spacing: { before: 200, after: 100 } });
+
+            // Build Inv Table Rows
+            const invRows = [];
+            // Header
+            const headerCells = tableData.headers.map(h => new TableCell({
+                children: [new Paragraph({ children: [text(h, true)], alignment: AlignmentType.CENTER })],
+                borders: allBorders,
+                shading: { fill: "F3F4F6" }
+            }));
+            invRows.push(new TableRow({ children: headerCells }));
+
+            // Data
+            tableData.rows.forEach(row => {
+                const cells = row.map((cell, idx) => new TableCell({
+                    children: [new Paragraph({ children: [text(cell, idx === 0)], alignment: idx === 0 ? AlignmentType.LEFT : AlignmentType.CENTER })],
+                    borders: allBorders
+                }));
+                invRows.push(new TableRow({ children: cells }));
+            });
+
+            const invTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: invRows
+            });
+
+            // 10. Advice
+            const adviceTitle = new Paragraph({ children: [text("Advice/Recommendation:", true, true)], spacing: { before: 200 } });
+            const adviceText = new Paragraph({ children: [text(getVal('advice'))] }); // Font might need fallback for Bengali
+
+            // 11. OPD
+            const opdTitle = new Paragraph({ children: [text("OPD follow up visit:", true)], spacing: { before: 200 } });
+            const opdText = new Paragraph({ children: [text(getVal('opd'))] });
+            const contactBox = new Paragraph({
+                children: [text("NICU Contact Number: ", true), text(getVal('contact'))],
+                border: allBorders,
+                spacing: { before: 100 }
+            });
+
+            // 12. Signatures
+            const sigTable = new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: [
+                                new Paragraph({ children: [text(getVal('prepBy'), true)], alignment: AlignmentType.CENTER }),
+                                new Paragraph({ children: [text("Prepared by")], alignment: AlignmentType.CENTER, border: { top: solidBorder } })
+                            ], width: { size: 33, type: WidthType.PERCENTAGE }, borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder } }),
+
+                             new TableCell({ children: [
+                                new Paragraph({ children: [text(getVal('checkBy'), true)], alignment: AlignmentType.CENTER }),
+                                new Paragraph({ children: [text("Checked by")], alignment: AlignmentType.CENTER, border: { top: solidBorder } })
+                            ], width: { size: 33, type: WidthType.PERCENTAGE }, borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder } }),
+
+                             new TableCell({ children: [
+                                new Paragraph({ children: [text("")], alignment: AlignmentType.CENTER }), // Spacer
+                                new Paragraph({ children: [text("Consultant Sign")], alignment: AlignmentType.CENTER, border: { top: solidBorder } })
+                            ], width: { size: 33, type: WidthType.PERCENTAGE }, borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder } }),
+                        ]
+                    })
+                ],
+                margins: { top: 700 } // Space above signatures
+            });
+
+            const doc = new Document({
+                sections: [{
+                    properties: {
+                        page: { margin: { top: "15mm", right: "15mm", bottom: "15mm", left: "15mm" } }
+                    },
+                    children: [
+                        headerTable,
+                        new Paragraph({ text: "" }), // Spacing
+                        patientInfo,
+                        summaryTitle,
+                        moreInfo,
+                        consultantRow,
+                        diagnosisRow,
+                        statusTable,
+                        historyTitle,
+                        historyText,
+                        new Paragraph({ text: "" }),
+                        generalInfoTable,
+                        treatmentTitle,
+                        treatmentText,
+                        invTitle,
+                        invTable,
+                        adviceTitle,
+                        adviceText,
+                        opdTitle,
+                        opdText,
+                        contactBox,
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ text: "" }),
+                        sigTable
                     ]
                 }]
             });
 
-            Packer.toBlob(doc).then(blob => {
-                saveAs(blob, `Discharge_${val("name").replace(/ /g,"_")}.docx`);
-            });
+            const blob = await Packer.toBlob(doc);
+            const fileName = (getVal('name').replace(/ /g,"_") || "Discharge_Summary") + ".docx";
+            saveAs(blob, fileName);
         }
 
         lucide.createIcons();
-        renderAll();
-        updatePreview();
+        loadData(); // Load saved data or initialize defaults
+
+        // Auto-expand textareas
+        document.querySelectorAll('textarea').forEach(el => {
+            el.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+            // Initial sizing
+            el.style.height = 'auto';
+            el.style.height = (el.scrollHeight) + 'px';
+        });
+
+        // --- RESIZER LOGIC ---
+        const resizer = document.getElementById('resizer');
+        const editorPanel = document.getElementById('editor-panel');
+        const previewPanel = document.getElementById('preview-panel');
+        const container = document.getElementById('main-container');
+
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizer.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault(); // Prevent selection
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            // Calculate width percentage
+            const containerRect = container.getBoundingClientRect();
+            const pointerRelativeXpos = e.clientX - containerRect.left;
+
+            // Constrain between 20% and 80%
+            const minWidth = containerRect.width * 0.2;
+            const maxWidth = containerRect.width * 0.8;
+
+            let newWidth = pointerRelativeXpos;
+            if (newWidth < minWidth) newWidth = minWidth;
+            if (newWidth > maxWidth) newWidth = maxWidth;
+
+            const percentage = (newWidth / containerRect.width) * 100;
+            editorPanel.style.width = percentage + '%';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if(isResizing) {
+                isResizing = false;
+                resizer.classList.remove('dragging');
+                document.body.style.cursor = 'default';
+            }
+        });
     </script>
 </body>
 </html>
-
